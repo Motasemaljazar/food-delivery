@@ -81,13 +81,13 @@
 
 <table>
 <tr>
-<td align="center"><img src="screenshots/01_login.jpg" width="200"/><br/><b>Login Screen</b><br/>تسجيل الدخول</td>
-<td align="center"><img src="screenshots/02_cart.jpg" width="200"/><br/><b>Shopping Cart</b><br/>سلة الطلبات</td>
-<td align="center"><img src="screenshots/03_profile.jpg" width="200"/><br/><b>User Profile</b><br/>الملف الشخصي</td>
+<td align="center"><img src="screenshots/01_login.jpg" width="200"/><br/><b>Live Chat</b><br/>الدردشة المباشرة</td>
+<td align="center"><img src="screenshots/02_cart.jpg" width="200"/><br/><b>User Profile</b><br/>الملف الشخصي</td>
+<td align="center"><img src="screenshots/03_profile.jpg" width="200"/><br/><b>Shopping Cart</b><br/>سلة الطلبات</td>
 </tr>
 <tr>
-<td align="center"><img src="screenshots/04_chat.jpg" width="200"/><br/><b>Live Chat</b><br/>الدردشة المباشرة</td>
-<td align="center"><img src="screenshots/05_driver_tracking.jpg" width="200"/><br/><b>Live Order Tracking</b><br/>تتبع الطلب لحظياً</td>
+<td align="center"><img src="screenshots/04_chat.jpg" width="200"/><br/><b>Live Order Tracking</b><br/>تتبع الطلب لحظياً</td>
+<td align="center"><img src="screenshots/05_driver_tracking.jpg" width="200"/><br/><b>Login Screen</b><br/>تسجيل الدخول</td>
 <td></td>
 </tr>
 </table>
@@ -96,7 +96,7 @@
 
 <table>
 <tr>
-<td align="center"><img src="screenshots/06_driver_stats.jpg" width="200"/><br/><b>Driver Dashboard</b><br/>لوحة السائق</td>
+<td align="center"><img src="screenshots/06_driver_stats.jpg" width="200"/><br/><b>Reports</b><br/>التقارير</td>
 <td align="center"><img src="screenshots/07_driver_reports.jpg" width="200"/><br/><b>Daily Reports</b><br/>إحصائيات اليوم</td>
 </tr>
 </table>
@@ -105,8 +105,8 @@
 
 <table>
 <tr>
-<td align="center"><img src="screenshots/10_dashboard_settings.jpg" width="400"/><br/><b>System Settings</b><br/>إعدادات النظام</td>
-<td align="center"><img src="screenshots/09_dashboard_products.jpg" width="400"/><br/><b>Products Management</b><br/>إدارة المنتجات</td>
+<td align="center"><img src="screenshots/10_dashboard_settings.jpg" width="400"/><br/><b>Products Management</b><br/>إدارة المنتجات</td>
+<td align="center"><img src="screenshots/09_dashboard_products.jpg" width="400"/><br/><b>System Settings</b><br/>إعدادات النظام</td>
 </tr>
 <tr>
 <td align="center" colspan="2"><img src="screenshots/08_dashboard_customers.jpg" width="600"/><br/><b>Customers Management</b><br/>إدارة الزبائن</td>
