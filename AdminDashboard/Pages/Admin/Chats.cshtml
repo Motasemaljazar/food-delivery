@@ -1,0 +1,366 @@
+@page
+@model AdminDashboard.Pages.Admin.AdminPageModel
+@{
+    ViewData["Title"] = "المحادثات";
+}
+
+<div class="admin-chats-page">
+  <div class="chats-header mb-3">
+    <h2 class="h4 mb-0">المحادثات</h2>
+    <p class="text-muted small mb-0">دردشة الدعم مع الزبائن</p>
+  </div>
+
+  <div class="chats-layout">
+    <!-- القائمة الجانبية: قائمة المحادثات -->
+    <aside class="chats-sidebar">
+      <div class="chats-sidebar-header">
+        <span class="chats-sidebar-title">المحادثات</span>
+        <div class="chats-sidebar-actions">
+          <div class="form-check me-1">
+            <input class="form-check-input" type="checkbox" id="chkThreadsSelectAll" title="تحديد الكل" />
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-danger me-1" id="btnDeleteThreads" disabled title="حذف المحادثات المحددة">
+            <i class="bi bi-trash"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnRefresh" title="تحديث">
+            <i class="bi bi-arrow-clockwise"></i>
+          </button>
+          <button type="button" class="btn btn-sm btn-success" id="btnBroadcast" title="إرسال رسالة لجميع المستخدمين">
+            <i class="bi bi-megaphone"></i>
+          </button>
+        </div>
+      </div>
+      <div class="chats-thread-list" id="threads"></div>
+      <div id="threadsEmpty" class="chats-empty-list">
+        <i class="bi bi-chat-dots text-muted"></i>
+        <p class="mb-0 small text-muted">لا توجد محادثات حالياً</p>
+      </div>
+    </aside>
+
+    <!-- منطقة المحادثة المختارة -->
+    <main class="chats-main">
+      <div id="chatPlaceholder" class="chats-placeholder">
+        <i class="bi bi-chat-left-text"></i>
+        <p class="mb-0">اختر محادثة من القائمة لبدء الدردشة</p>
+      </div>
+
+      <div id="chatPanel" class="chats-panel d-none">
+        <div class="chats-panel-header">
+          <div class="chats-panel-user">
+            <div class="chats-avatar chats-avatar-customer">
+              <i class="bi bi-person-fill"></i>
+            </div>
+            <div class="chats-panel-info">
+              <h3 class="chats-panel-name" id="chatTitle">—</h3>
+              <div class="chats-panel-meta" id="chatMeta"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chats-messages-wrap">
+          <div id="messages" class="chats-messages"></div>
+        </div>
+
+        <div class="chats-reply-wrap">
+          <div class="input-group">
+            <input type="text" class="form-control" id="msgText" placeholder="اكتب ردك هنا..." />
+            <button type="button" class="btn btn-primary" id="btnSend">
+              <i class="bi bi-send-fill me-1"></i> إرسال
+            </button>
+          </div>
+          <div class="small text-muted mt-2" id="status"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- Modal: إرسال رسالة لجميع المستخدمين -->
+<div class="modal fade" id="broadcastModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">إرسال رسالة لجميع المستخدمين</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small">ستصل الرسالة إلى دردشة كل زبون مع إشعار على الجوال.</p>
+        <label class="form-label">نص الرسالة</label>
+        <textarea class="form-control" id="broadcastMessage" rows="4" placeholder="اكتب الرسالة هنا..." maxlength="2000"></textarea>
+        <div class="form-text"><span id="broadcastCount">0</span> / 2000</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="btn btn-success" id="btnBroadcastSend">
+          <span class="btn-text">إرسال للجميع</span>
+          <span class="spinner-border spinner-border-sm d-none" role="status"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+let currentThreadId = null;
+let allThreads = [];
+let selectedThreadIds = new Set();
+let hiddenThreadIds = new Set(JSON.parse(localStorage.getItem('hiddenChatThreads') || '[]').filter(x => typeof x === 'number'));
+const customerIdFromUrl = new URLSearchParams(window.location.search).get('customerId');
+
+const elThreads = document.getElementById('threads');
+const elThreadsEmpty = document.getElementById('threadsEmpty');
+const elMessages = document.getElementById('messages');
+const elTitle = document.getElementById('chatTitle');
+const elMeta = document.getElementById('chatMeta');
+const elStatus = document.getElementById('status');
+const chatPlaceholder = document.getElementById('chatPlaceholder');
+const chatPanel = document.getElementById('chatPanel');
+const chkThreadsSelectAll = document.getElementById('chkThreadsSelectAll');
+const btnDeleteThreads = document.getElementById('btnDeleteThreads');
+
+function esc(s){ return (s ?? '').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function formatTime(iso){
+  if(!iso) return '';
+  try {
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = now - d;
+    if(diff < 60000) return 'الآن';
+    if(diff < 3600000) return Math.floor(diff/60000) + ' د';
+    if(d.toDateString() === now.toDateString()) return d.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+    if(diff < 86400000 * 2) return 'أمس';
+    return d.toLocaleDateString('ar', { day: 'numeric', month: 'short' });
+  } catch { return ''; }
+}
+
+function fmtMsg(m){
+  const fromAdmin = !!m.fromAdmin;
+  const wrapCls = fromAdmin ? 'chats-msg-row chats-msg-admin' : 'chats-msg-row chats-msg-customer';
+  const bubbleCls = fromAdmin ? 'chats-bubble chats-bubble-admin' : 'chats-bubble chats-bubble-customer';
+  const label = fromAdmin ? 'الإدارة' : 'الزبون';
+  const time = formatTime(m.createdAtUtc);
+  return `<div class="${wrapCls}">
+    <div class="${bubbleCls}">
+      <div class="chats-bubble-text">${esc(m.message||'')}</div>
+      <div class="chats-bubble-meta">${esc(label)} · ${time}</div>
+    </div>
+  </div>`;
+}
+
+function renderThreadList(){
+  if(!elThreads) return;
+  if(allThreads.length === 0){
+    elThreads.innerHTML = '';
+    elThreadsEmpty.classList.remove('d-none');
+    selectedThreadIds.clear();
+    if(chkThreadsSelectAll) chkThreadsSelectAll.checked = false;
+    if(btnDeleteThreads) btnDeleteThreads.disabled = true;
+    return;
+  }
+  elThreadsEmpty.classList.add('d-none');
+  elThreads.innerHTML = allThreads.map(t => {
+    const name = (t.customerName && t.customerName.trim()) ? t.customerName : ('زبون #' + t.customerId);
+    const unread = t.unreadCount || 0;
+    const preview = (t.lastMessagePreview || '').trim();
+    const time = formatTime(t.lastMessageAtUtc || t.updatedAtUtc || t.createdAtUtc);
+    const active = t.id === currentThreadId ? ' active' : '';
+    const checked = selectedThreadIds.has(t.id) ? ' checked' : '';
+    return `<button type="button" class="chats-thread-item${active}" data-thread-id="${t.id}">
+      <div class="chats-thread-avatar d-flex align-items-center">
+        <input type="checkbox" class="form-check-input me-1 thread-select" data-thread-id="${t.id}"${checked}/>
+        <i class="bi bi-person-fill"></i>
+      </div>
+      <div class="chats-thread-body">
+        <div class="chats-thread-row">
+          <span class="chats-thread-name">${esc(name)}</span>
+          ${unread > 0 ? `<span class="chats-thread-badge">${unread}</span>` : ''}
+          <span class="chats-thread-time">${time}</span>
+        </div>
+        <div class="chats-thread-preview">${preview ? esc(preview.length > 45 ? preview.slice(0,45)+'…' : preview) : '—'}</div>
+      </div>
+    </button>`;
+  }).join('');
+
+  elThreads.querySelectorAll('.chats-thread-item').forEach(btn => {
+    btn.addEventListener('click', function(){ openThread(parseInt(this.dataset.threadId, 10)); });
+  });
+
+  elThreads.querySelectorAll('.thread-select').forEach(chk => {
+    chk.addEventListener('click', function(e){
+      e.stopPropagation();
+      const id = parseInt(this.dataset.threadId, 10);
+      if(isNaN(id)) return;
+      if(this.checked) selectedThreadIds.add(id); else selectedThreadIds.delete(id);
+      updateBulkActions();
+    });
+  });
+
+  updateBulkActions();
+}
+
+async function loadThreads(){
+  const res = await fetch('/api/admin/complaints');
+  if(!res.ok){ elThreads.innerHTML = '<div class="text-danger small">فشل تحميل المحادثات</div>'; return; }
+  let list = await res.json();
+  if(Array.isArray(list) && hiddenThreadIds.size > 0){
+    // نخفي فقط المحادثات التي تم إخفاؤها ولا تحتوي على رسائل جديدة (unreadCount == 0).
+    list = list.filter(t => !(hiddenThreadIds.has(t.id) && (t.unreadCount ?? 0) === 0));
+  }
+  allThreads = list || [];
+  selectedThreadIds.clear();
+  renderThreadList();
+
+  if(customerIdFromUrl){
+    const cid = parseInt(customerIdFromUrl, 10);
+    if(!isNaN(cid)){
+      const tr = await fetch('/api/admin/chat-thread/' + cid);
+      if(tr.ok){
+        const info = await tr.json();
+        await openThread(info.threadId);
+        if(history.replaceState) history.replaceState(null, '', window.location.pathname);
+      }
+    }
+  }
+}
+
+function updateBulkActions(){
+  if(!btnDeleteThreads || !chkThreadsSelectAll) return;
+  const count = selectedThreadIds.size;
+  btnDeleteThreads.disabled = count === 0;
+  btnDeleteThreads.innerHTML = count > 0
+    ? `<i class="bi bi-trash"></i> حذف (${count})`
+    : '<i class="bi bi-trash"></i>';
+  if(allThreads.length === 0){
+    chkThreadsSelectAll.checked = false;
+  } else {
+    const allIds = allThreads.map(t => t.id);
+    chkThreadsSelectAll.checked = allIds.length > 0 && allIds.every(id => selectedThreadIds.has(id));
+  }
+}
+
+async function openThread(id){
+  currentThreadId = id;
+  chatPlaceholder.classList.add('d-none');
+  chatPanel.classList.remove('d-none');
+
+  const res = await fetch('/api/admin/complaint/' + id);
+  if(!res.ok){ elMessages.innerHTML = '<div class="text-danger small">فشل تحميل الرسائل</div>'; return; }
+  const t = await res.json();
+
+  const displayName = (t.customerName && t.customerName.trim()) ? t.customerName : ('زبون #' + t.customerId);
+  elTitle.textContent = displayName;
+  let meta = [];
+  if(t.customerPhone) meta.push(t.customerPhone);
+  if(t.orderId) meta.push('طلب #' + t.orderId);
+  elMeta.textContent = meta.length ? meta.join(' · ') : '—';
+
+  elMessages.innerHTML = (t.messages || []).map(fmtMsg).join('') || '<div class="text-muted small text-center py-4">لا توجد رسائل بعد</div>';
+  elMessages.scrollTop = elMessages.scrollHeight;
+
+  const idx = allThreads.findIndex(x => x.id === id);
+  if(idx >= 0){ allThreads[idx].unreadCount = 0; allThreads[idx].customerName = t.customerName; allThreads[idx].customerPhone = t.customerPhone; }
+  renderThreadList();
+}
+
+document.getElementById('btnSend').addEventListener('click', async function(){
+  if(!currentThreadId){ alert('اختر محادثة أولاً'); return; }
+  const input = document.getElementById('msgText');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  elStatus.textContent = 'جارٍ الإرسال...';
+  const res = await fetch('/api/admin/complaint/' + currentThreadId + '/reply', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: text })
+  });
+  elStatus.textContent = res.ok ? 'تم الإرسال' : 'فشل الإرسال';
+  if(res.ok) await openThread(currentThreadId);
+});
+
+document.getElementById('btnRefresh').addEventListener('click', loadThreads);
+
+if(chkThreadsSelectAll){
+  chkThreadsSelectAll.addEventListener('change', function(){
+    selectedThreadIds.clear();
+    if(this.checked){
+      allThreads.forEach(t => { if(t && typeof t.id === 'number') selectedThreadIds.add(t.id); });
+    }
+    renderThreadList();
+  });
+}
+
+if(btnDeleteThreads){
+  btnDeleteThreads.addEventListener('click', async function(){
+    const ids = Array.from(selectedThreadIds);
+    if(ids.length === 0) return;
+    if(!confirm('سيتم إخفاء هذه المحادثات من هذه الصفحة فقط (لن تُحذف من قاعدة البيانات أو من تطبيق الزبون). هل تريد المتابعة؟')) return;
+    ids.forEach(id => {
+      if(typeof id === 'number') hiddenThreadIds.add(id);
+    });
+    localStorage.setItem('hiddenChatThreads', JSON.stringify(Array.from(hiddenThreadIds)));
+    selectedThreadIds.clear();
+    await loadThreads();
+    if(window.adminToast) window.adminToast('تم الإخفاء', 'تم إخفاء المحادثات المحددة من القائمة.', 'warn');
+  });
+}
+
+const broadcastModal = new bootstrap.Modal(document.getElementById('broadcastModal'));
+document.getElementById('btnBroadcast').addEventListener('click', function(){
+  document.getElementById('broadcastMessage').value = '';
+  document.getElementById('broadcastCount').textContent = '0';
+  broadcastModal.show();
+});
+document.getElementById('broadcastMessage').addEventListener('input', function(){
+  document.getElementById('broadcastCount').textContent = (document.getElementById('broadcastMessage').value || '').length;
+});
+document.getElementById('btnBroadcastSend').addEventListener('click', async function(){
+  const txt = document.getElementById('broadcastMessage').value.trim();
+  if(!txt){ alert('اكتب نص الرسالة'); return; }
+  const btn = document.getElementById('btnBroadcastSend');
+  const btnText = btn.querySelector('.btn-text');
+  const spinner = btn.querySelector('.spinner-border');
+  btn.disabled = true;
+  if(btnText) btnText.textContent = 'جاري الإرسال...';
+  if(spinner) spinner.classList.remove('d-none');
+  try {
+    const res = await fetch('/api/admin/broadcast-chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: txt })
+    });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok){ alert(data.error === 'message_required' ? 'الرسالة مطلوبة' : 'فشل الإرسال'); return; }
+    broadcastModal.hide();
+    alert('تم إرسال الرسالة إلى ' + (data.sent || 0) + ' مستخدم');
+    loadThreads();
+  } finally {
+    btn.disabled = false;
+    if(btnText) btnText.textContent = 'إرسال للجميع';
+    if(spinner) spinner.classList.add('d-none');
+  }
+});
+
+const hub = new signalR.HubConnectionBuilder().withUrl('/hubs/notify').withAutomaticReconnect().build();
+hub.start().catch(console.error);
+hub.on('complaint_new', function(){ loadThreads(); });
+hub.on('chat_message_received', function(p){
+  if(p && p.threadId === currentThreadId) openThread(currentThreadId);
+  else {
+    const idx = allThreads.findIndex(x => x.id === p.threadId);
+    if(idx >= 0){
+      allThreads[idx].lastMessageAtUtc = p.createdAtUtc;
+      allThreads[idx].lastMessagePreview = (p.fromAdmin ? 'الإدارة: ' : 'الزبون: ') + (p.message ? (p.message.length > 60 ? p.message.substring(0,60)+'…' : p.message) : '');
+      if(!p.fromAdmin) allThreads[idx].unreadCount = (allThreads[idx].unreadCount || 0) + 1;
+      renderThreadList();
+    } else loadThreads();
+  }
+});
+
+loadThreads();
+})();
+</script>
+}

@@ -1,0 +1,186 @@
+@page
+@model AdminDashboard.Pages.Admin.AdminPageModel
+@{
+    ViewData["Title"] = "الأقسام";
+}
+
+<div class="admin-page-header">
+  <div class="page-icon"><i class="bi bi-folder2-open"></i></div>
+  <div>
+    <h1 class="page-title">إدارة الأقسام</h1>
+    <p class="page-subtitle">أقسام المنيو والترتيب والحالة</p>
+  </div>
+</div>
+
+<div id="statusMsg" class="alert d-none" role="alert"></div>
+
+<div class="admin-card">
+  <div class="admin-card-header">
+    <span>قائمة الأقسام</span>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#catModal" id="btnAddCat">
+      <i class="bi bi-plus-lg me-1"></i>إضافة قسم
+    </button>
+  </div>
+  <div class="admin-card-body p-0">
+    <div class="table-responsive admin-mobile-cards">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>الحالة</th>
+            <th>الترتيب</th>
+            <th class="text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="catTblBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة إضافة / تعديل قسم -->
+<div class="modal fade" id="catModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="catModalTitle">إضافة قسم</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="catId" />
+        <input type="hidden" id="catImageUrl" />
+        <div class="mb-3">
+          <label class="form-label">اسم القسم</label>
+          <input type="text" class="form-control" id="catName" placeholder="اسم القسم" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">الترتيب</label>
+          <input type="number" class="form-control" id="catSort" value="0" placeholder="0" />
+        </div>
+        <div class="mb-3">
+          <label class="form-label">الحالة</label>
+          <select class="form-select" id="catActive">
+            <option value="true">✅ مفعل</option>
+            <option value="false"> 🔒 مخفي</option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">صورة القسم (اختياري)</label>
+          <input type="file" class="form-control" id="catFile" accept="image/*" />
+          <div id="catImagePreview" class="mt-2"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="btn btn-primary" id="catSaveModal">حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+  const tbody = document.getElementById('catTblBody');
+  const modalEl = document.getElementById('catModal');
+  const modal = new bootstrap.Modal(modalEl);
+  const modalTitle = document.getElementById('catModalTitle');
+
+  function showStatus(text, ok){
+    const el = document.getElementById('statusMsg');
+    el.textContent = text;
+    el.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger') + ' mt-2';
+    el.classList.remove('d-none');
+    clearTimeout(window._catStatusTimer);
+    window._catStatusTimer = setTimeout(() => el.classList.add('d-none'), 3500);
+  }
+
+  function renderCatImage(){
+    const url = document.getElementById('catImageUrl').value;
+    const box = document.getElementById('catImagePreview');
+    if(!url){ box.innerHTML = '<span class="text-muted small">لا توجد صورة</span>'; return; }
+    box.innerHTML = '<img src="' + url + '" style="max-width:160px;max-height:90px;object-fit:cover" class="rounded-3 border" />';
+  }
+
+  async function uploadCatImage(){
+    const input = document.getElementById('catFile');
+    if(!input.files || input.files.length === 0) return;
+    const fd = new FormData();
+    fd.append('file', input.files[0]);
+    const res = await fetch('/api/admin/upload/asset?kind=categories', { method: 'POST', body: fd, credentials: 'include' });
+    if(!res.ok) throw new Error('فشل رفع صورة القسم');
+    const j = await res.json();
+    document.getElementById('catImageUrl').value = j.url || '';
+    renderCatImage();
+  }
+
+  let categoriesList = [];
+  async function load(){
+    const res = await fetch('/api/admin/menu', { credentials: 'include' });
+    if(!res.ok){ tbody.innerHTML = '<tr><td colspan="5">فشل التحميل. تحقق من صلاحيات الدخول.</td></tr>'; return; }
+    const data = await res.json();
+    categoriesList = data.categories || [];
+    const yesNo = v => v ? 'نعم' : 'لا';
+    const esc = s => (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    tbody.innerHTML = categoriesList.length ? categoriesList.map(c => '<tr><td data-label="#">' + c.id + '</td><td data-label="الاسم">' + esc(c.name) + '</td><td data-label="الحالة">' + yesNo(c.isActive) + '</td><td data-label="الترتيب">' + (c.sortOrder||0) + '</td><td class="text-end mobile-actions-cell" data-label=""><button class="btn btn-sm btn-outline-primary me-1" onclick="window.editCategory(' + c.id + ')">تعديل</button><button class="btn btn-sm btn-outline-danger" onclick="window.deleteCategory(' + c.id + ')">حذف</button></td></tr>').join('') : '<tr><td colspan="5">لا توجد أقسام. اضغط «إضافة قسم» للبدء.</td></tr>';
+  }
+
+  window.editCategory = function(id){
+    const c = categoriesList.find(x => x.id === id);
+    if(!c) return;
+    document.getElementById('catId').value = c.id;
+    document.getElementById('catName').value = c.name || '';
+    document.getElementById('catSort').value = c.sortOrder ?? 0;
+    document.getElementById('catActive').value = String(c.isActive);
+    document.getElementById('catImageUrl').value = c.imageUrl || '';
+    document.getElementById('catFile').value = '';
+    modalTitle.textContent = 'تعديل القسم';
+    renderCatImage();
+    modal.show();
+  };
+
+  window.deleteCategory = async function(id){
+    if(!confirm('حذف هذا القسم؟')) return;
+    const res = await fetch('/api/admin/menu/category/' + id, { method: 'DELETE', credentials: 'include' });
+    if(res.ok){ showStatus('تم حذف القسم', true); load(); }
+    else showStatus('فشل حذف القسم', false);
+  };
+
+  document.getElementById('btnAddCat').addEventListener('click', function(){
+    document.getElementById('catId').value = '';
+    document.getElementById('catName').value = '';
+    document.getElementById('catSort').value = '0';
+    document.getElementById('catActive').value = 'true';
+    document.getElementById('catImageUrl').value = '';
+    document.getElementById('catFile').value = '';
+    modalTitle.textContent = 'إضافة قسم';
+    renderCatImage();
+  });
+
+  document.getElementById('catSaveModal').addEventListener('click', async function(){
+    const name = document.getElementById('catName').value.trim();
+    if(!name){ showStatus('أدخل اسم القسم', false); return; }
+    try {
+      await uploadCatImage();
+      const payload = {
+        id: document.getElementById('catId').value ? parseInt(document.getElementById('catId').value, 10) : null,
+        name: name,
+        imageUrl: document.getElementById('catImageUrl').value || null,
+        isActive: document.getElementById('catActive').value === 'true',
+        sortOrder: parseInt(document.getElementById('catSort').value || '0', 10)
+      };
+      const res = await fetch('/api/admin/menu/category', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'include' });
+      if(!res.ok){ showStatus('فشل حفظ القسم', false); return; }
+      modal.hide();
+      showStatus('تم حفظ القسم', true);
+      load();
+    } catch(e) {
+      showStatus(e.message || 'خطأ', false);
+    }
+  });
+
+  load();
+})();
+</script>
+}

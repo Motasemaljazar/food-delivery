@@ -1,0 +1,1183 @@
+@page
+@model AdminDashboard.Pages.Admin.AdminPageModel
+
+<div class="admin-page-header">
+  <div class="page-icon"><i class="bi bi-bag-check"></i></div>
+  <div>
+    <h1 class="page-title">إدارة الطلبات</h1>
+    <p class="page-subtitle">متابعة الطلبات والتعيين والوقت المتوقع</p>
+  </div>
+</div>
+
+<div class="admin-card">
+  <div class="admin-card-header">
+    <span>الطلبات الأخيرة</span>
+    <div class="d-flex gap-2 align-items-center flex-wrap">
+      <select class="form-select form-select-sm" id="bulkDriver" style="min-width:220px"><option value="">اختر سائق...</option></select>
+      <button class="btn btn-sm btn-success" id="btnBulkAssign" disabled>تعيين للسائق</button>
+      <button class="btn btn-sm btn-warning text-dark" id="btnManualOrder" title="إضافة طلب يدوي من اللوحة"><i class="bi bi-plus-circle me-1"></i>طلب يدوي</button>
+      <button class="btn btn-sm btn-danger" id="btnDeleteAll" onclick="deleteAllOrders()">حذف الكل</button>
+      <button class="btn btn-sm btn-primary" id="btnRefresh"><i class="bi bi-arrow-clockwise me-1"></i>تحديث</button>
+    </div>
+  </div>
+  <div class="admin-card-body p-0">
+  <div class="table-responsive orders-table-responsive">
+    <table class="table table-hover table-sm align-middle mb-0 orders-data-table" id="tbl">
+      <thead class="table-light"><tr><th class="text-center order-col-chk"><input type="checkbox" id="chkAll" /></th><th class="order-col-id">#</th><th class="order-col-status">الحالة</th><th class="order-col-eta">الوقت</th><th class="order-col-total">المبلغ</th><th class="order-col-fee">الرسوم</th><th class="order-col-km">كم</th><th class="order-col-type">نوع الطلب</th><th class="order-col-customer">الزبون</th><th class="order-col-driver">السائق</th><th class="order-col-actions text-center">إجراءات</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  </div>
+</div>
+
+<div class="modal fade" id="assignModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">تعيين سائق</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="orderId" />
+        <select class="form-select" id="drivers"></select>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button class="btn btn-primary" id="btnAssign">حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="etaModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header"><h5 class="modal-title">تحديد الوقت المتوقع للوصول</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+      <div class="modal-body">
+        <input type="hidden" id="etaOrderId" />
+        <div class="row g-2">
+          <div class="col-6">
+            <label class="form-label">مدة التجهيز (دقيقة)</label>
+            <input class="form-control" type="number" min="0" max="600" id="prepEta" placeholder="مثلاً 15" />
+          </div>
+          <div class="col-6">
+            <label class="form-label">مدة التوصيل (دقيقة)</label>
+            <input class="form-control" type="number" min="0" max="600" id="deliveryEta" placeholder="مثلاً 20" />
+          </div>
+        </div>
+        <div class="form-text mt-2">سيظهر للزبون الوقت المتوقع لوصول الطلب (التجهيز + التوصيل).</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button class="btn btn-primary" id="btnSaveEta">حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalEditOrder" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">تعديل الطلب (بدون وقت)</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="editOrderId" />
+        <div class="mb-2 text-muted">الزبون: <span id="editOrderCustomer" class="fw-semibold"></span></div>
+
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label">العنوان</label>
+            <input class="form-control" id="editOrderAddress" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">خط العرض</label>
+            <input class="form-control" id="editOrderLat" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">خط الطول</label>
+            <input class="form-control" id="editOrderLng" />
+          </div>
+        </div>
+
+        <div class="row g-2 mt-2">
+          <div class="col-md-4">
+            <label class="form-label">المسافة (كم)</label>
+            <input class="form-control" id="editOrderDistanceKm" readonly placeholder="—" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">رسوم التوصيل</label>
+            <input class="form-control" type="number" step="0.01" min="0" id="editOrderDeliveryFee" placeholder="0" />
+          </div>
+        </div>
+
+        <div class="mt-2">
+          <label class="form-label">ملاحظة الطلب</label>
+          <input class="form-control" id="editOrderNotes" />
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label mb-2">الأصناف</label>
+          <div class="table-responsive">
+            <table class="table table-sm table-bordered" id="editOrderItemsTable">
+              <thead class="table-light">
+                <tr>
+                  <th>الصنف</th>
+                  <th class="text-center" style="width:100px">الكمية</th>
+                  <th class="text-center" style="width:60px">حذف</th>
+                </tr>
+              </thead>
+              <tbody id="editOrderItemsBody"></tbody>
+            </table>
+          </div>
+          <div class="mt-2 d-flex flex-wrap align-items-end gap-2">
+            <div class="d-flex align-items-end gap-2 flex-grow-1 flex-wrap">
+              <div style="min-width:200px;">
+                <label class="form-label small mb-1">إضافة صنف</label>
+                <select class="form-select form-select-sm" id="editOrderAddProduct">
+                  <option value="">اختر صنفاً...</option>
+                </select>
+              </div>
+              <div style="width:90px;">
+                <label class="form-label small mb-1">الكمية</label>
+                <input type="number" class="form-control form-control-sm" id="editOrderAddQty" min="1" max="99" value="1" />
+              </div>
+              <button type="button" class="btn btn-sm btn-outline-primary" id="btnEditOrderAddItem"><i class="bi bi-plus-lg me-1"></i>إضافة صنف</button>
+            </div>
+          </div>
+          <p class="form-text small text-muted mb-0 mt-2">يمكنك تعديل الكمية، حذف صنف، أو إضافة أصناف جديدة من القائمة.</p>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button class="btn btn-warning" onclick="saveEditOrder()">حفظ التعديل</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalManualOrder" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-plus-circle me-2"></i>إضافة طلب يدوي</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label">اسم الزبون <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="manualCustomerName" placeholder="اسم العميل" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">رقم الهاتف <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="manualCustomerPhone" placeholder="05xxxxxxxx" dir="ltr" />
+          </div>
+        </div>
+        <div class="row g-2 mb-3">
+          <div class="col-md-8">
+            <label class="form-label">عنوان التوصيل</label>
+            <input type="text" class="form-control" id="manualDeliveryAddress" placeholder="اختياري" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">رسوم التوصيل</label>
+            <input type="number" class="form-control" id="manualDeliveryFee" value="0" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">ملاحظة</label>
+          <input type="text" class="form-control" id="manualNotes" placeholder="اختياري" />
+        </div>
+        <div class="mb-2 d-flex justify-content-between align-items-center">
+          <label class="form-label mb-0 fw-bold">الأصناف <span class="text-danger">*</span></label>
+          <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddManualItem"><i class="bi bi-plus me-1"></i>إضافة صنف</button>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered">
+            <thead class="table-light">
+              <tr>
+                <th style="width:55%">الصنف</th>
+                <th class="text-center" style="width:25%">الكمية</th>
+                <th class="text-center" style="width:20%">إجراء</th>
+              </tr>
+            </thead>
+            <tbody id="manualOrderItemsBody"></tbody>
+          </table>
+        </div>
+        <p class="form-text small text-muted mb-0">يجب إضافة صنف واحد على الأقل. يتم إنشاء الزبون تلقائياً إن لم يكن مسجلاً بالرقم.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="btn btn-warning text-dark" id="btnSubmitManualOrder"><i class="bi bi-check2 me-1"></i>إنشاء الطلب</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalOrderActions" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title"><i class="bi bi-list-ul me-2"></i>إجراءات الطلب</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-2" id="modalOrderActionsBody">
+        <!-- تُملأ ديناميكياً عند فتح النافذة -->
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="modalViewOrder" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content border-0" style="border-radius:16px; overflow:hidden;">
+      <div class="modal-header text-white border-0" style="background: linear-gradient(135deg, #b8860b 0%, #daa520 50%, #b8860b 100%); padding: 1.5rem 1.5rem 1rem;">
+        <div class="d-flex align-items-center gap-3">
+          <div style="background:rgba(255,255,255,0.2); border-radius:50%; width:48px; height:48px; display:flex; align-items:center; justify-content:center;">
+            <i class="bi bi-receipt fs-5"></i>
+          </div>
+          <div>
+            <h5 class="modal-title mb-0 fw-bold" id="viewOrderTitle">تفاصيل الطلب</h5>
+            <small id="viewOrderDate" class="opacity-75"></small>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-0" id="viewOrderBody" style="background:#f8f9fa;">
+        <div class="text-center py-5"><div class="spinner-border" style="color:#daa520;"></div></div>
+      </div>
+      <div class="modal-footer border-0" style="background:#f8f9fa;">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">إغلاق</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const tblBody = document.querySelector('#tbl tbody');
+const assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+const driversSelect = document.getElementById('drivers');
+const bulkDriverSelect = document.getElementById('bulkDriver');
+const btnBulkAssign = document.getElementById('btnBulkAssign');
+const chkAll = document.getElementById('chkAll');
+const selectedIds = new Set();
+let _ordersList = [];
+let _orderActionsModal = null;
+
+async function loadDrivers(){
+  const res = await fetch('/api/admin/drivers');
+  if(!res.ok) return [];
+  return await res.json();
+}
+
+const driverStatusTxt = (st)=> ['متاح','مشغول','غير متاح'][st] || '';
+async function fillDrivers(selectEl){
+  const drivers = await loadDrivers();
+  selectEl.innerHTML = ['<option value="">اختر سائق</option>'].concat(drivers.map(d=>`<option value="${d.id}">#${d.id} - ${d.name} (${driverStatusTxt(d.status)})</option>`)).join('');
+}
+
+const statusName = (s)=>['طلب جديد','مؤكد','قيد التجهيز','جاهز للاستلام','مع السائق','تم التوصيل','تم الإلغاء'][s] || s;
+const printedOrders = new Set(JSON.parse(localStorage.getItem('printedOrders') || '[]'));
+function formatAmount(v){ const n = Number(v); if(isNaN(n)) return '—'; return String(Math.floor(n)); }
+
+async function load(){
+  const res = await fetch('/api/admin/orders');
+  if(!res.ok){ tblBody.innerHTML='<tr><td colspan="11">فشل تحميل الطلبات</td></tr>'; return; }
+  let list = [];
+  try { list = await res.json(); }
+  catch(e){
+    console.error('orders json parse failed', e);
+    tblBody.innerHTML='<tr><td colspan="11">تعذر قراءة بيانات الطلبات (قد تكون الجلسة انتهت). أعد تسجيل الدخول ثم حدّث الصفحة.</td></tr>';
+    return;
+  }
+  const deliveryFeeText = (o)=> (o.deliveryFee != null ? formatAmount(o.deliveryFee) : '—');
+  const distanceText = (o)=> (o.deliveryDistanceKm != null && o.deliveryDistanceKm > 0 ? formatAmount(o.deliveryDistanceKm) : '—');
+  const totalText = (o)=> { const n = Number(o.total); return isNaN(n) ? '—' : formatAmount(n); };
+  const etaText = (o)=>{
+    const p = o.prepEtaMinutes ?? 0;
+    const d = o.deliveryEtaMinutes ?? 0;
+    const total = p + d;
+    if(total>0) return `<span class="badge bg-success">${total} </span>`;
+    const approx = o.approxTravelEtaMinutes ?? 0;
+    if(approx>0) return `<span class="badge bg-outline-secondary" style="border:1px solid #6c757d; color:#6c757d;">~${approx} </span>`;
+    return '<span class="text-muted"></span>';
+  };
+  const mapBtn = (o)=>{
+    const lat = (typeof o.deliveryLat === 'number') ? o.deliveryLat : 0;
+    const lng = (typeof o.deliveryLng === 'number') ? o.deliveryLng : 0;
+    const disabled = (!lat || !lng) ? 'disabled' : '';
+    return `<button class="btn btn-outline-info" ${disabled} onclick="openMap(${lat}, ${lng})">خريطة</button>`;
+  };
+  // تحديد نوع الطلب من orderType فقط (لا استنتاج من الإحداثيات)
+  const orderTypeLabel = (o)=>{
+    const typ = (o.orderType || 'delivery').toLowerCase();
+    if (typ === 'pickup') return '<span class="badge bg-info">استلام من الفرع</span>';
+    if (typ === 'dine-in' || typ === 'dinein') return '<span class="badge bg-secondary">في المطعم</span>';
+    return '<span class="badge bg-primary">توصيل</span>';
+  };
+  _ordersList = list;
+  tblBody.innerHTML = list.map(o=>`<tr>
+    <td class="order-mobile-chk" data-label="تحديد"><input class="chkRow" type="checkbox" data-id="${o.id}" ${selectedIds.has(o.id)?'checked':''} /></td>
+    <td data-label="الترقيم">${o.id}</td>
+    <td data-label="الحالة">
+      <span class="badge bg-secondary">${statusName(o.currentStatus)}</span>
+      ${printedOrders.has(o.id) ? ' <span class="badge bg-success" title="تمت الطباعة"><i class="bi bi-check-circle-fill"></i> مطبوع</span>' : ''}
+      ${o.wasEditedByCustomer ? ' <span class="badge bg-warning text-dark">تم تعديل الطلب من قبل الزبون</span>' : ''}
+      ${o.wasEditedByAdmin ? ' <span class="badge bg-info text-dark">تم تعديل الطلب من قبل الإدارة</span>' : ''}
+      ${(o.currentStatus===6 && o.cancelLabel) ? ` <span class="badge bg-danger">${o.cancelLabel}</span>` : ''}
+    </td>
+    <td data-label="الوقت">${etaText(o)}</td>
+    <td class="order-col-total" data-label="المبلغ">${totalText(o)}</td>
+    <td class="order-col-fee" data-label="الرسوم">${deliveryFeeText(o)}</td>
+    <td class="order-col-km" data-label="كم">${distanceText(o)}</td>
+    <td data-label="نوع الطلب">${orderTypeLabel(o)}</td>
+    <td data-label="الزبون">
+      <div class="fw-semibold">${o.customerName ?? ('#'+o.customerId)}</div>
+      <div class="text-muted" style="font-size:12px">${o.customerPhone ?? ''}</div>
+    </td>
+    <td data-label="السائق">${o.driverId ?? '-'}</td>
+    <td class="text-center order-mobile-actions order-actions-cell" data-label="إجراءات">
+      <button class="btn btn-sm btn-outline-primary" type="button" onclick="openOrderActionsPopup(${o.id})" title="إجراءات">
+        <i class="bi bi-three-dots-vertical me-1"></i>إجراءات
+      </button>
+    </td>
+  </tr>`).join('');
+
+  document.querySelectorAll('.chkRow').forEach(el=>{
+    el.addEventListener('change', (e)=>{
+      const id = parseInt(e.target.getAttribute('data-id'));
+      if(e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+      btnBulkAssign.disabled = selectedIds.size===0 || !bulkDriverSelect.value;
+    });
+  });
+
+  chkAll.checked = list.length>0 && [...selectedIds].length===list.length;
+  btnBulkAssign.disabled = selectedIds.size===0 || !bulkDriverSelect.value;
+}
+
+async function cancelOrder(orderId){
+  if(!confirm('هل أنت متأكد من إلغاء الطلب؟')) return;
+  try{
+    const res = await fetch(`/api/admin/order/${orderId}/cancel`, { method:'POST' });
+    if(!res.ok){
+      let msg = 'فشل إلغاء الطلب';
+      try{ const j = await res.json(); if(j && j.message) msg = j.message; }catch(_){ }
+      alert(msg);
+      return;
+    }
+    await load();
+    if(window.adminToast) window.adminToast('تم الإلغاء', `تم إلغاء الطلب #${orderId}`, 'warn');
+  }catch(e){
+    console.error(e);
+    alert('حدث خطأ أثناء الإلغاء');
+  }
+}
+
+async function deleteOrder(orderId){
+  if(!confirm('⚠️ هل أنت متأكد من حذف الطلب نهائياً؟\n\nسيتم حذف الطلب من التقارير والإيرادات وجميع البيانات المتعلقة به.\n\nهذا الإجراء لا يمكن التراجع عنه!')) return;
+  try{
+    const res = await fetch(`/api/admin/order/${orderId}/delete`, { method:'DELETE' });
+    if(!res.ok){
+      let msg = 'فشل حذف الطلب';
+      try{ const j = await res.json(); if(j && j.message) msg = j.message; }catch(_){ }
+      alert(msg);
+      return;
+    }
+    await load();
+    if(window.adminToast) window.adminToast('تم الحذف', `تم حذف الطلب #${orderId} نهائياً`, 'warn');
+  }catch(e){
+    console.error(e);
+    alert('حدث خطأ أثناء الحذف');
+  }
+}
+
+async function deleteAllOrders(){
+  if(!confirm('⚠️⚠️⚠️ تحذير شديد الخطورة ⚠️⚠️⚠️\n\nهل أنت متأكد تماماً من حذف جميع الطلبات من قاعدة البيانات؟\n\nسيتم حذف كافة الطلبات (الحالية + السابقة) من التقارير والإيرادات وجميع البيانات المتعلقة بها.\n\nهذا الإجراء لا يمكن التراجع عنه إطلاقاً!\n\nاضغط "موافق" فقط إذا كنت متأكداً 100%.')) return;
+  if(!confirm('تأكيد نهائي: هل تريد حقاً حذف جميع الطلبات بشكل نهائي؟')) return;
+  try{
+    const res = await fetch('/api/admin/orders/delete-all', { method:'DELETE' });
+    if(!res.ok){
+      let msg = 'فشل حذف الطلبات';
+      try{ const j = await res.json(); if(j && j.message) msg = j.message; }catch(_){ }
+      alert(msg);
+      return;
+    }
+    const result = await res.json();
+    await load();
+    if(window.adminToast) window.adminToast('تم الحذف', `تم حذف ${result.deletedCount || 0} طلب/طلبات نهائياً`, 'warn');
+  }catch(e){
+    console.error(e);
+    alert('حدث خطأ أثناء الحذف');
+  }
+}
+
+let editOrderModal = null;
+let _editOrderItems = [];
+let _editOrderProducts = [];
+let _editOrderVariantsByProduct = {};
+let _editOrderAddonsByProduct = {};
+
+function renderEditOrderItems(items){
+  const tbody = document.getElementById('editOrderItemsBody');
+  tbody.innerHTML = items.map((it, idx)=>{
+    const prodName = it.productNameSnapshot || 'صنف #' + it.productId;
+    const unitPrice = (it.unitPriceSnapshot != null) ? Number(it.unitPriceSnapshot).toFixed(2) : '0.00';
+    const productId = it.productId;
+    const vars = _editOrderVariantsByProduct[productId] || [];
+    const adds = _editOrderAddonsByProduct[productId] || [];
+
+    let parsed = null;
+    if (typeof it.optionsSnapshot === 'string' && it.optionsSnapshot.trim().startsWith('{')) {
+      try { parsed = JSON.parse(it.optionsSnapshot); } catch(_) {}
+    }
+    const selectedVariantId = parsed && parsed.variantId ? parsed.variantId : null;
+    const selectedAddonIds = parsed && Array.isArray(parsed.addonIds) ? parsed.addonIds : [];
+
+    let optionsHtml = '';
+    if (vars.length || adds.length) {
+      optionsHtml += '<div class="mt-1 small text-muted">الخيارات:</div>';
+      if (vars.length) {
+        optionsHtml += '<div class="mb-1">';
+        vars.forEach(v => {
+          const id = v.id;
+          const name = (v.name || '').toString();
+          const delta = Number(v.priceDelta || 0);
+          const label = delta === 0 ? name : `${name} (+${delta.toFixed(0)})`;
+          const inputId = `edit-var-${idx}-${id}`;
+          const checked = selectedVariantId === id ? 'checked' : '';
+          optionsHtml += `<div class="form-check form-check-inline mb-0">
+            <input class="form-check-input edit-item-variant" type="radio" name="editVar_${idx}" id="${inputId}" value="${id}" ${checked}>
+            <label class="form-check-label small" for="${inputId}">${label}</label>
+          </div>`;
+        });
+        optionsHtml += '</div>';
+      }
+      if (adds.length) {
+        optionsHtml += '<div>';
+        adds.forEach(a => {
+          const id = a.id;
+          const name = (a.name || '').toString();
+          const price = Number(a.price || 0);
+          const inputId = `edit-add-${idx}-${id}`;
+          const checked = selectedAddonIds.includes(id) ? 'checked' : '';
+          optionsHtml += `<div class="form-check form-check-inline mb-0">
+            <input class="form-check-input edit-item-addon" type="checkbox" id="${inputId}" value="${id}" ${checked}>
+            <label class="form-check-label small" for="${inputId}">${name}${price ? ` (+${price.toFixed(0)})` : ''}</label>
+          </div>`;
+        });
+        optionsHtml += '</div>';
+      }
+    }
+
+    return `<tr data-idx="${idx}">
+      <td>
+        <div>
+          <div>${prodName}</div>
+          <div class="text-muted small">سعر الوحدة: ${unitPrice}</div>
+          ${optionsHtml}
+        </div>
+      </td>
+      <td class="text-center"><input class="form-control form-control-sm edit-item-qty" data-idx="${idx}" type="number" min="1" max="99" value="${it.quantity || 1}" style="width:80px; margin:0 auto;" /></td>
+      <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger py-0 px-1 edit-item-remove" data-idx="${idx}" title="حذف الصنف"><i class="bi bi-trash"></i></button></td>
+    </tr>`;
+  }).join('');
+  tbody.querySelectorAll('.edit-item-remove').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const idx = parseInt(this.getAttribute('data-idx'), 10);
+      if(isNaN(idx) || idx < 0 || idx >= _editOrderItems.length) return;
+      _editOrderItems.splice(idx, 1);
+      renderEditOrderItems(_editOrderItems);
+    });
+  });
+}
+
+async function loadEditOrderProducts(){
+  if(_editOrderProducts.length > 0) return _editOrderProducts;
+  const res = await fetch('/api/admin/menu');
+  if(!res.ok) return [];
+  const data = await res.json();
+  _editOrderProducts = (data.products || []).filter(p => p.isActive !== false).map(p => ({ id: p.id, name: p.name || ('صنف #' + p.id), price: p.price || 0 }));
+  _editOrderVariantsByProduct = {};
+  (data.variants || []).forEach(v => {
+    if(v.isActive === false) return;
+    const pid = v.productId;
+    if(!_editOrderVariantsByProduct[pid]) _editOrderVariantsByProduct[pid] = [];
+    _editOrderVariantsByProduct[pid].push(v);
+  });
+  _editOrderAddonsByProduct = {};
+  (data.addons || []).forEach(a => {
+    if(a.isActive === false) return;
+    const pid = a.productId;
+    if(!_editOrderAddonsByProduct[pid]) _editOrderAddonsByProduct[pid] = [];
+    _editOrderAddonsByProduct[pid].push(a);
+  });
+  return _editOrderProducts;
+}
+
+function fillEditOrderAddProductSelect(){
+  const sel = document.getElementById('editOrderAddProduct');
+  sel.innerHTML = '<option value="">اختر صنفاً...</option>' + _editOrderProducts.map(p => {
+    const name = (p.name || ('صنف #' + p.id)).replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return `<option value="${p.id}">${name} — ${Number(p.price || 0).toFixed(0)} ل.س</option>`;
+  }).join('');
+}
+
+async function openEditOrder(orderId){
+  try{
+    const res = await fetch(`/api/admin/order/${orderId}`);
+    if(!res.ok){ alert('تعذر تحميل بيانات الطلب'); return; }
+    const o = await res.json();
+    document.getElementById('editOrderId').value = o.id;
+    document.getElementById('editOrderCustomer').textContent = (o.customerName || ('#'+o.customerId));
+    document.getElementById('editOrderNotes').value = o.notes || '';
+    document.getElementById('editOrderAddress').value = o.deliveryAddress || '';
+    document.getElementById('editOrderLat').value = (typeof o.deliveryLat === 'number') ? o.deliveryLat : '';
+    document.getElementById('editOrderLng').value = (typeof o.deliveryLng === 'number') ? o.deliveryLng : '';
+    document.getElementById('editOrderDistanceKm').value = (o.deliveryDistanceKm != null && o.deliveryDistanceKm > 0) ? Number(o.deliveryDistanceKm).toFixed(2) : '—';
+    document.getElementById('editOrderDeliveryFee').value = (o.deliveryFee != null) ? Number(o.deliveryFee).toFixed(2) : '';
+    await loadEditOrderProducts();
+    _editOrderItems = (o.items || []).map(i => ({
+      productId: i.productId,
+      quantity: i.quantity || 1,
+      optionsSnapshot: i.optionsSnapshot ?? null,
+      productNameSnapshot: i.productNameSnapshot,
+      unitPriceSnapshot: i.unitPriceSnapshot
+    }));
+    renderEditOrderItems(_editOrderItems);
+    fillEditOrderAddProductSelect();
+    document.getElementById('editOrderAddProduct').value = '';
+    document.getElementById('editOrderAddQty').value = '1';
+    if(!editOrderModal) editOrderModal = new bootstrap.Modal(document.getElementById('modalEditOrder'));
+    editOrderModal.show();
+  }catch(e){
+    console.error(e);
+    alert('حدث خطأ أثناء فتح التعديل');
+  }
+}
+
+async function saveEditOrder(){
+  const id = parseInt(document.getElementById('editOrderId').value);
+  const items = [];
+  for (let i = 0; i < _editOrderItems.length; i++) {
+    const it = _editOrderItems[i];
+    const row = document.querySelector(`#editOrderItemsBody tr[data-idx="${i}"]`);
+    let qty = it.quantity;
+    const input = document.querySelector('#editOrderItemsBody .edit-item-qty[data-idx="' + i + '"]');
+    if (input) {
+      const v = parseInt(input.value, 10);
+      if (!isNaN(v) && v >= 1 && v <= 99) qty = v;
+    }
+    let optionsSnapshot = it.optionsSnapshot;
+    if (row) {
+      const varInput = row.querySelector('.edit-item-variant:checked');
+      const addonInputs = row.querySelectorAll('.edit-item-addon:checked');
+      const variantId = varInput ? parseInt(varInput.value, 10) : null;
+      const addonIds = Array.from(addonInputs)
+        .map(el => parseInt(el.value, 10))
+        .filter(v => !isNaN(v));
+      const optObj = {};
+      if (variantId && !isNaN(variantId)) optObj.variantId = variantId;
+      if (addonIds.length) optObj.addonIds = addonIds;
+      optionsSnapshot = Object.keys(optObj).length ? JSON.stringify(optObj) : null;
+      _editOrderItems[i].optionsSnapshot = optionsSnapshot;
+    }
+    items.push({ productId: it.productId, quantity: qty, optionsSnapshot });
+  }
+  const deliveryFeeVal = document.getElementById('editOrderDeliveryFee').value.trim();
+  const payload = {
+    items,
+    notes: document.getElementById('editOrderNotes').value,
+    deliveryAddress: document.getElementById('editOrderAddress').value,
+    deliveryLat: document.getElementById('editOrderLat').value ? Number(document.getElementById('editOrderLat').value) : null,
+    deliveryLng: document.getElementById('editOrderLng').value ? Number(document.getElementById('editOrderLng').value) : null,
+    deliveryFee: deliveryFeeVal !== '' && isFinite(Number(deliveryFeeVal)) ? Number(deliveryFeeVal) : null,
+  };
+  const res = await fetch(`/api/admin/order/${id}/edit`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
+  if(!res.ok){
+    let msg='فشل حفظ التعديل';
+    try{ const j = await res.json(); if(j && j.message) msg=j.message; }catch(_){ }
+    alert(msg);
+    return;
+  }
+  editOrderModal.hide();
+  await load();
+  if(window.adminToast) window.adminToast('تم الحفظ', `تم تعديل الطلب #${id}`, 'info');
+}
+
+chkAll.addEventListener('change', ()=>{
+  const rows = document.querySelectorAll('.chkRow');
+  if(chkAll.checked){
+    rows.forEach(r=>{ r.checked = true; selectedIds.add(parseInt(r.getAttribute('data-id'))); });
+  } else {
+    rows.forEach(r=> r.checked = false);
+    selectedIds.clear();
+  }
+  btnBulkAssign.disabled = selectedIds.size===0 || !bulkDriverSelect.value;
+});
+
+bulkDriverSelect.addEventListener('change', ()=>{
+  btnBulkAssign.disabled = selectedIds.size===0 || !bulkDriverSelect.value;
+});
+
+btnBulkAssign.addEventListener('click', async()=>{
+  if(selectedIds.size===0 || !bulkDriverSelect.value) return;
+  const driverId = parseInt(bulkDriverSelect.value);
+  const orderIds = [...selectedIds];
+  const res = await fetch('/api/admin/assign-driver/bulk',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ orderIds, driverId })
+  });
+  if(!res.ok){
+    alert('فشل تعيين الطلبات للسائق (قد يكون تجاوز حد 15 طلباً نشطاً للسائق)');
+    return;
+  }
+  selectedIds.clear();
+  chkAll.checked = false;
+  await load();
+});
+
+window.openOrderActionsPopup = function(orderId){
+  const o = _ordersList.find(x => x.id === orderId);
+  if(!o){ alert('الطلب غير موجود'); return; }
+  const hasLatLng = (typeof o.deliveryLat === 'number' && o.deliveryLat && typeof o.deliveryLng === 'number' && o.deliveryLng);
+  const canEdit = ![5,6].includes(o.currentStatus);
+  const canCancel = canEdit;
+  const isPickup = (!hasLatLng); // استلام من الفرع عندما لا يوجد إحداثيات توصيل
+  const body = document.getElementById('modalOrderActionsBody');
+  body.innerHTML = `
+    <div class="d-grid gap-1">
+      <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-action="view" data-order-id="${o.id}"><i class="bi bi-eye me-2"></i>عرض الطلب</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-action="assign" data-order-id="${o.id}"><i class="bi bi-person-plus me-2"></i>تعيين سائق</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-action="edit" data-order-id="${o.id}" ${!canEdit?'disabled':''}><i class="bi bi-pencil me-2"></i>تعديل الطلب</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-action="eta" data-order-id="${o.id}"><i class="bi bi-clock me-2"></i>الوقت المتوقع</button>
+      <hr class="my-2"/>
+      <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-action="print" data-order-id="${o.id}"><i class="bi bi-printer me-2"></i>طباعة</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-action="map" data-order-id="${o.id}" data-lat="${o.deliveryLat ?? 0}" data-lng="${o.deliveryLng ?? 0}" ${!hasLatLng?'disabled':''}><i class="bi bi-geo-alt me-2"></i>خريطة</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary text-start" data-action="chat" data-order-id="${o.id}" data-customer-id="${o.customerId}"><i class="bi bi-chat-dots me-2"></i>دردشة</button>
+      ${o.customerPhone ? `<a class="btn btn-sm btn-outline-secondary text-start" href="tel:${String(o.customerPhone).replace(/"/g,'&quot;')}" role="button"><i class="bi bi-telephone me-2"></i>اتصال</a>` : ''}
+      ${isPickup && ![5,6].includes(o.currentStatus) ? `<button type="button" class="btn btn-sm btn-outline-success text-start" data-action="mark-picked-up" data-order-id="${o.id}"><i class="bi bi-bag-check me-2"></i>تم الاستلام من الفرع</button>` : ''}
+      <hr class="my-2"/>
+      <button type="button" class="btn btn-sm btn-outline-danger text-start" data-action="cancel" data-order-id="${o.id}" ${!canCancel?'disabled':''}><i class="bi bi-x-circle me-2"></i>إلغاء الطلب</button>
+      <button type="button" class="btn btn-sm btn-outline-danger text-start" data-action="delete" data-order-id="${o.id}"><i class="bi bi-trash me-2"></i>حذف</button>
+    </div>`;
+  body.querySelectorAll('[data-action]').forEach(btn=>{
+    btn.addEventListener('click', function(){
+      const act = this.getAttribute('data-action');
+      const id = parseInt(this.getAttribute('data-order-id'),10);
+      const order = _ordersList.find(x=>x.id===id);
+      if(!order) return;
+      if(this.disabled) return;
+      if(_orderActionsModal) _orderActionsModal.hide();
+      if(act==='view') openViewOrder(id);
+      else if(act==='assign') openAssign(id, order.driverId ?? null);
+      else if(act==='edit') openEditOrder(id);
+      else if(act==='eta') openEta(id, order.prepEtaMinutes ?? null, order.deliveryEtaMinutes ?? null);
+      else if(act==='print') openPrint(id);
+      else if(act==='map') openMap(order.deliveryLat ?? 0, order.deliveryLng ?? 0);
+      else if(act==='chat') openChat(order.customerId);
+      else if(act==='cancel') cancelOrder(id);
+      else if(act==='delete') deleteOrder(id);
+      else if(act==='mark-picked-up') markPickupDelivered(id);
+    });
+  });
+  if(!_orderActionsModal) _orderActionsModal = new bootstrap.Modal(document.getElementById('modalOrderActions'));
+  _orderActionsModal.show();
+};
+
+window.openAssign = async(orderId, currentDriverId)=>{
+  document.getElementById('orderId').value = orderId;
+  const drivers = await loadDrivers();
+  driversSelect.innerHTML = ['<option value="">إلغاء التعيين</option>'].concat(drivers.map(d=>`<option value="${d.id}">#${d.id} - ${d.name} (${driverStatusTxt(d.status)})</option>`)).join('');
+  if(currentDriverId) driversSelect.value = String(currentDriverId);
+  assignModal.show();
+}
+
+async function markPickupDelivered(orderId){
+  if(!confirm('هل تريد تعليم هذا الطلب (استلام من الفرع) كمستلم؟ سينتقل إلى الطلبات المسلمة والتقارير.')) return;
+  try{
+    const res = await fetch(`/api/admin/orders/${orderId}/mark-picked-up`, { method:'POST' });
+    if(!res.ok){
+      let msg = 'فشل تحديث حالة الطلب';
+      try{
+        const j = await res.json();
+        if(j && j.message) msg = j.message;
+      }catch(_){}
+      alert(msg);
+      return;
+    }
+    await load();
+    if(window.adminToast) window.adminToast('تم التحديث', `تم تعليم الطلب #${orderId} كمستلم من الفرع`, 'success');
+  }catch(e){
+    console.error(e);
+    alert('حدث خطأ أثناء التحديث');
+  }
+}
+
+
+const etaModal = new bootstrap.Modal(document.getElementById('etaModal'));
+
+window.openPrint = async (orderId)=>{
+  if (typeof window.printOrder !== 'function') {
+    if (window.adminToast) window.adminToast('الطباعة من الويب معطلة', 'الطباعة تتم فقط من تطبيق الويندوز مع الطابعات المختارة فيه.', 'warn');
+    else alert('الطباعة تتم فقط من تطبيق الويندوز مع الطابعات المختارة فيه.');
+    return;
+  }
+  try {
+    const res = await fetch(`/api/admin/order/${orderId}`, { credentials: 'same-origin' });
+    if (!res.ok) { alert('تعذر تحميل تفاصيل الطلب'); return; }
+    const order = await res.json();
+    const orderTime = order.createdAtUtc ? new Date(order.createdAtUtc).toISOString() : new Date().toISOString();
+    const orderData = {
+      orderId: String(order.id),
+      customerName: order.customerName || 'عميل',
+      customerPhone: order.customerPhone || '',
+      items: (order.items || []).map(i => ({
+        productName: i.productNameSnapshot || '',
+        quantity: i.quantity || 1,
+        price: Number(i.unitPriceSnapshot) || 0,
+        category: i.categoryName || undefined,
+        categoryId: i.categoryId != null ? i.categoryId : undefined
+      })),
+      totalAmount: Number(order.total) || 0,
+      deliveryAddress: order.deliveryAddress || undefined,
+      notes: order.notes || undefined,
+      orderTime: orderTime,
+      paymentMethod: order.paymentMethod || 'نقدي',
+      orderType: order.orderType || 'delivery'
+    };
+    window.__topchefPrintResult = function(result) {
+      if (result && typeof result.message === 'string') {
+        if (result.success) {
+          printedOrders.add(orderId);
+          localStorage.setItem('printedOrders', JSON.stringify([...printedOrders]));
+          const el = document.querySelector('a.link-print-order[data-print-order-id="' + orderId + '"]');
+          if (el) el.innerHTML = '<i class="bi bi-printer me-2"></i>تمت الطباعة';
+          if (window.adminToast) window.adminToast('تمت الطباعة', result.message, 'success');
+          else {
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 start-50 translate-middle-x mb-3 px-4 py-2 rounded bg-success text-white';
+            toast.textContent = result.message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+          }
+        } else {
+          alert(result.message);
+        }
+      }
+      window.__topchefPrintResult = null;
+    };
+    window.printOrder(orderData);
+  } catch (e) {
+    console.error(e);
+    alert('حدث خطأ أثناء إعداد الطباعة');
+  }
+};
+
+window.openChat = function(customerId){
+  window.location.href = `/Admin/Chats?customerId=${customerId}`;
+};
+
+window.openMap = (lat, lng)=>{
+  try {
+    if(!lat || !lng) return;
+    const q = `${lat},${lng}`;
+    const url = `https://www.google.com/maps?q=${encodeURIComponent(q)}`;
+    window.open(url, "_blank");
+  } catch(e) {
+    console.error(e);
+  }
+};
+
+window.openEta = (orderId, prepEtaMinutes, deliveryEtaMinutes)=>{
+  document.getElementById('etaOrderId').value = orderId;
+  document.getElementById('prepEta').value = (prepEtaMinutes===null || prepEtaMinutes==='null') ? '' : prepEtaMinutes;
+  document.getElementById('deliveryEta').value = (deliveryEtaMinutes===null || deliveryEtaMinutes==='null') ? '' : deliveryEtaMinutes;
+  etaModal.show();
+};
+
+document.getElementById('btnSaveEta').addEventListener('click', async()=>{
+  const orderId = parseInt(document.getElementById('etaOrderId').value);
+  const prepEta = document.getElementById('prepEta').value.trim();
+  const delEta = document.getElementById('deliveryEta').value.trim();
+  const prepEtaMinutes = prepEta==='' ? null : parseInt(prepEta);
+  const deliveryEtaMinutes = delEta==='' ? null : parseInt(delEta);
+  const res = await fetch('/api/admin/order-eta', {
+    method:'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ orderId, prepEtaMinutes, deliveryEtaMinutes })
+  });
+  if(res.ok){ etaModal.hide(); load(); }
+});
+
+document.getElementById('btnEditOrderAddItem').addEventListener('click', function(){
+  const sel = document.getElementById('editOrderAddProduct');
+  const productId = sel.value ? parseInt(sel.value, 10) : null;
+  if(!productId || isNaN(productId)){ alert('اختر صنفاً أولاً'); return; }
+  const qtyInput = document.getElementById('editOrderAddQty');
+  let qty = parseInt(qtyInput.value, 10);
+  if(isNaN(qty) || qty < 1) qty = 1;
+  if(qty > 99) qty = 99;
+  const product = _editOrderProducts.find(p => p.id === productId);
+  const name = product ? product.name : ('صنف #' + productId);
+  const price = product ? (product.price || 0) : 0;
+  _editOrderItems.push({
+    productId,
+    quantity: qty,
+    optionsSnapshot: null,
+    productNameSnapshot: name,
+    unitPriceSnapshot: price
+  });
+  renderEditOrderItems(_editOrderItems);
+  sel.value = '';
+  qtyInput.value = '1';
+});
+
+document.getElementById('btnAssign').addEventListener('click', async()=>{
+  const orderId = parseInt(document.getElementById('orderId').value);
+  const driverId = driversSelect.value ? parseInt(driversSelect.value) : null;
+  const res = await fetch('/api/admin/assign-driver', {
+    method:'POST',
+    headers: { 'Content-Type':'application/json' },
+    body: JSON.stringify({ orderId, driverId })
+  });
+  if(res.ok){ assignModal.hide(); load(); }
+});
+
+
+document.getElementById('btnRefresh').addEventListener('click', load);
+
+// ——— طلب يدوي ———
+let manualOrderProducts = [];
+let manualOrderVariantsByProduct = {};
+let manualOrderAddonsByProduct = {};
+/** عرض -> المنتج المرتبط (لخيارات النوع/الإضافات) */
+let manualOrderOfferPrimaryProduct = {};
+let manualOrderModal = null;
+
+async function loadManualOrderProducts(){
+  const res = await fetch('/api/admin/menu');
+  if(!res.ok) return [];
+  const data = await res.json();
+  const prods = (data.products || []).filter(p => p.isActive !== false).map(p => ({ id: p.id, name: p.name || ('صنف #' + p.id), price: p.price || 0 }));
+  manualOrderOfferPrimaryProduct = {};
+  const offerList = (data.offers || []).map(o => {
+    const price = (o.priceAfter != null ? o.priceAfter : o.priceBefore) != null ? (Number(o.priceAfter) || Number(o.priceBefore) || 0) : 0;
+    if(o.primaryProductId) manualOrderOfferPrimaryProduct[Number(o.id)] = o.primaryProductId;
+    return { id: -Number(o.id), name: (o.title || 'عرض #' + o.id) + ' (عرض)', price };
+  });
+  manualOrderProducts = [...prods, ...offerList];
+  manualOrderVariantsByProduct = {};
+  (data.variants || []).forEach(v => {
+    if(v.isActive === false) return;
+    const pid = v.productId;
+    if(!manualOrderVariantsByProduct[pid]) manualOrderVariantsByProduct[pid] = [];
+    manualOrderVariantsByProduct[pid].push(v);
+  });
+  manualOrderAddonsByProduct = {};
+  (data.addons || []).forEach(a => {
+    if(a.isActive === false) return;
+    const pid = a.productId;
+    if(!manualOrderAddonsByProduct[pid]) manualOrderAddonsByProduct[pid] = [];
+    manualOrderAddonsByProduct[pid].push(a);
+  });
+  return manualOrderProducts;
+}
+
+function renderManualOrderRow(index, products, selectedId, qty){
+  const opts = products.map(p => `<option value="${p.id}" ${p.id === selectedId ? 'selected' : ''}>${p.name} — ${Number(p.price).toFixed(0)} ل.س</option>`).join('');
+  return `<tr data-idx="${index}">
+    <td>
+      <select class="form-select form-select-sm manual-item-product">${opts ? '<option value="">اختر صنفاً</option>' + opts : '<option value="">لا توجد أصناف</option>'}</select>
+      <div class="mt-1 small text-muted manual-item-options"></div>
+    </td>
+    <td class="text-center"><input type="number" class="form-control form-control-sm manual-item-qty" min="1" max="99" value="${qty || 1}" style="width:70px;margin:0 auto;" /></td>
+    <td class="text-center"><button type="button" class="btn btn-sm btn-outline-danger btn-remove-manual-item" title="حذف"><i class="bi bi-trash"></i></button></td>
+  </tr>`;
+}
+
+function renderManualOptionsForRow(tr){
+  const prodSelect = tr.querySelector('.manual-item-product');
+  const container = tr.querySelector('.manual-item-options');
+  if(!prodSelect || !container) return;
+  const productId = parseInt(prodSelect.value, 10);
+  if(!productId){
+    container.innerHTML = '';
+    return;
+  }
+  let vars = [], adds = [];
+  if(productId < 0){
+    const offerId = -productId;
+    const primaryProductId = manualOrderOfferPrimaryProduct[offerId];
+    if(primaryProductId){
+      vars = manualOrderVariantsByProduct[primaryProductId] || [];
+      adds = manualOrderAddonsByProduct[primaryProductId] || [];
+    }
+    if(vars.length === 0 && adds.length === 0){
+      container.innerHTML = '<span class="text-muted">عرض — لا أنواع أو إضافات</span>';
+      return;
+    }
+  } else {
+    vars = manualOrderVariantsByProduct[productId] || [];
+    adds = manualOrderAddonsByProduct[productId] || [];
+  }
+  if(vars.length === 0 && adds.length === 0){
+    container.innerHTML = '<span class="text-muted">لا توجد أنواع أو إضافات لهذا الصنف.</span>';
+    return;
+  }
+  const idx = tr.getAttribute('data-idx') || '0';
+  let html = '';
+  if(vars.length){
+    html += '<div class="mb-1"><span class="d-block mb-1">النوع:</span>';
+    vars.forEach(v => {
+      const id = v.id;
+      const name = (v.name || '').toString();
+      const delta = Number(v.priceDelta || 0);
+      const label = delta === 0 ? name : `${name} (+${delta.toFixed(0)})`;
+      const inputId = `manual-var-${idx}-${id}`;
+      html += `<div class="form-check form-check-inline mb-0">
+        <input class="form-check-input manual-item-variant" type="radio" name="manualVar_${idx}" id="${inputId}" value="${id}">
+        <label class="form-check-label small" for="${inputId}">${label}</label>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  if(adds.length){
+    html += '<div><span class="d-block mb-1">الإضافات:</span>';
+    adds.forEach(a => {
+      const id = a.id;
+      const name = (a.name || '').toString();
+      const price = Number(a.price || 0);
+      const inputId = `manual-add-${idx}-${id}`;
+      html += `<div class="form-check form-check-inline mb-0">
+        <input class="form-check-input manual-item-addon" type="checkbox" id="${inputId}" value="${id}">
+        <label class="form-check-label small" for="${inputId}">${name}${price ? ` (+${price.toFixed(0)})` : ''}</label>
+      </div>`;
+    });
+    html += '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function addManualOrderRow(selectedId, qty){
+  const tbody = document.getElementById('manualOrderItemsBody');
+  const idx = tbody.querySelectorAll('tr').length;
+  tbody.insertAdjacentHTML('beforeend', renderManualOrderRow(idx, manualOrderProducts, selectedId, qty || 1));
+  const tr = tbody.querySelector('tr:last-child');
+  if(!tr) return;
+  tr.setAttribute('data-idx', String(idx));
+  tr.querySelector('.btn-remove-manual-item')?.addEventListener('click', function(){
+    this.closest('tr')?.remove();
+  });
+  const prodSelect = tr.querySelector('.manual-item-product');
+  if(prodSelect){
+    prodSelect.addEventListener('change', function(){
+      renderManualOptionsForRow(tr);
+    });
+  }
+
+  renderManualOptionsForRow(tr);
+}
+
+document.getElementById('btnManualOrder').addEventListener('click', async function(){
+  if(manualOrderProducts.length === 0) manualOrderProducts = await loadManualOrderProducts();
+  document.getElementById('manualCustomerName').value = '';
+  document.getElementById('manualCustomerPhone').value = '';
+  document.getElementById('manualDeliveryAddress').value = '';
+  document.getElementById('manualDeliveryFee').value = '0';
+  document.getElementById('manualNotes').value = '';
+  document.getElementById('manualOrderItemsBody').innerHTML = '';
+  addManualOrderRow(null, 1);
+  if(!manualOrderModal) manualOrderModal = new bootstrap.Modal(document.getElementById('modalManualOrder'));
+  manualOrderModal.show();
+});
+
+document.getElementById('btnAddManualItem').addEventListener('click', function(){
+  addManualOrderRow(null, 1);
+});
+
+document.getElementById('btnSubmitManualOrder').addEventListener('click', async function(){
+  const customerName = (document.getElementById('manualCustomerName').value || '').trim();
+  const customerPhone = (document.getElementById('manualCustomerPhone').value || '').trim();
+  if(!customerName){ alert('يرجى إدخال اسم الزبون'); return; }
+  if(!customerPhone){ alert('يرجى إدخال رقم هاتف الزبون'); return; }
+  const rows = document.querySelectorAll('#manualOrderItemsBody tr');
+  const items = [];
+  for(const tr of rows){
+    const productId = parseInt(tr.querySelector('.manual-item-product')?.value, 10);
+    const qty = parseInt(tr.querySelector('.manual-item-qty')?.value, 10) || 1;
+    if(isNaN(productId) || productId === 0 || qty < 1) continue;
+    const varInput = tr.querySelector('.manual-item-variant:checked');
+    const addonInputs = tr.querySelectorAll('.manual-item-addon:checked');
+    const variantId = varInput ? parseInt(varInput.value, 10) : null;
+    const addonIds = Array.from(addonInputs)
+      .map(el => parseInt(el.value, 10))
+      .filter(v => !isNaN(v));
+    let optionsSnapshot = null;
+    const optObj = {};
+    if(variantId && !isNaN(variantId)) optObj.variantId = variantId;
+    if(addonIds.length) optObj.addonIds = addonIds;
+    if(Object.keys(optObj).length) optionsSnapshot = JSON.stringify(optObj);
+    const item = { productId, quantity: qty };
+    if(optionsSnapshot) item.optionsSnapshot = optionsSnapshot;
+    items.push(item);
+  }
+  if(items.length === 0){ alert('يرجى إضافة صنف واحد على الأقل'); return; }
+  const payload = {
+    customerName,
+    customerPhone,
+    deliveryAddress: (document.getElementById('manualDeliveryAddress').value || '').trim() || null,
+    deliveryFee: parseFloat(document.getElementById('manualDeliveryFee').value) || 0,
+    notes: (document.getElementById('manualNotes').value || '').trim() || null,
+    items
+  };
+  this.disabled = true;
+  try {
+    const res = await fetch('/api/admin/manual-order', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    const data = await res.json().catch(() => ({}));
+    if(!res.ok){
+      alert(data.message || 'فشل إنشاء الطلب');
+      return;
+    }
+    manualOrderModal.hide();
+    await load();
+    if(window.adminToast) window.adminToast('تم إنشاء الطلب', 'تم إضافة الطلب #' + (data.id || '') + ' بنجاح', 'success');
+    else alert('تم إنشاء الطلب #' + (data.id || '') + ' بنجاح');
+  } catch(e){
+    console.error(e);
+    alert('حدث خطأ أثناء إنشاء الطلب');
+  } finally {
+    this.disabled = false;
+  }
+});
+
+(async()=>{
+  const drivers = await loadDrivers();
+  bulkDriverSelect.innerHTML = ['<option value="">اختر سائق</option>'].concat(drivers.map(d=>`<option value="${d.id}">#${d.id} - ${d.name} (${driverStatusTxt(d.status)})</option>`)).join('');
+})();
+
+const hub = new signalR.HubConnectionBuilder().withUrl('/hubs/notify').withAutomaticReconnect().build();
+hub.start().catch(console.error);
+hub.on('order_new', ()=>load());
+hub.on('order_status', ()=>load());
+hub.on('order_assigned', ()=>load());
+hub.on('order_edited', ()=>load());
+hub.on('order_edited', ()=>load());
+
+load();
+setInterval(()=>load(), 15000);
+
+let viewOrderModal = null;
+
+window.openViewOrder = async (orderId) => {
+  if (!viewOrderModal) viewOrderModal = new bootstrap.Modal(document.getElementById('modalViewOrder'));
+  document.getElementById('viewOrderTitle').textContent = `تفاصيل الطلب #${orderId}`;
+  document.getElementById('viewOrderDate').textContent = '';
+  document.getElementById('viewOrderBody').innerHTML = '<div class="text-center py-5"><div class="spinner-border" style="color:#daa520;"></div></div>';
+  viewOrderModal.show();
+  try {
+    const res = await fetch(`/api/admin/order/${orderId}`, { credentials: 'same-origin' });
+    if (!res.ok) { document.getElementById('viewOrderBody').innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-circle fs-3"></i><p class="mt-2">تعذر تحميل تفاصيل الطلب</p></div>'; return; }
+    const o = await res.json();
+    const statusColors = ['primary','success','warning','info','secondary','success','danger'];
+    const statusNames = ['طلب جديد','مؤكد','قيد التجهيز','جاهز للاستلام','مع السائق','تم التوصيل','تم الإلغاء'];
+    const st = o.currentStatus || 0;
+    const statusColor = statusColors[st] || 'secondary';
+    const statusLabel = statusNames[st] || st;
+    const orderDate = o.createdAtUtc ? new Date(o.createdAtUtc) : null;
+    const dateStr = orderDate ? orderDate.toLocaleString('ar-SA', { year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+    document.getElementById('viewOrderDate').textContent = dateStr;
+    const subtotal = (o.items || []).reduce((s, i) => s + (Number(i.unitPriceSnapshot) * (i.quantity || 1)), 0);
+    const deliveryFee = o.deliveryFee != null ? Number(o.deliveryFee) : 0;
+    const total = Number(o.total) || 0;
+    const orderTypeT = (o.orderType || 'delivery').toLowerCase();
+    const orderTypeBadgeClass = orderTypeT === 'pickup' ? 'bg-info' : (orderTypeT === 'dine-in' || orderTypeT === 'dinein') ? 'bg-secondary' : 'bg-primary';
+    const orderTypeText = orderTypeT === 'pickup' ? 'استلام من الفرع' : (orderTypeT === 'dine-in' || orderTypeT === 'dinein') ? 'في المطعم' : 'توصيل';
+    const itemsHtml = (o.items || []).map(i => {
+      const opts = i.optionsSnapshot;
+      let optsStr = '';
+      if (opts && Array.isArray(opts) && opts.length > 0) {
+        optsStr = `<div class="text-muted small mt-1">${opts.map(op => (op.name || '') + (op.value ? ': ' + op.value : '')).join(' • ')}</div>`;
+      }
+      const lineTotal = formatAmount(Number(i.unitPriceSnapshot) * (i.quantity || 1));
+      return `<div class="d-flex align-items-start justify-content-between py-2 border-bottom">
+        <div class="flex-grow-1">
+          <div class="fw-semibold">${i.productNameSnapshot || 'صنف'}</div>
+          ${optsStr}
+          <div class="text-muted small">${(i.quantity || 1)} × ${formatAmount(Number(i.unitPriceSnapshot))}</div>
+        </div>
+        <div class="fw-bold ms-3 text-end" style="min-width:70px;">${lineTotal}</div>
+      </div>`;
+    }).join('');
+    document.getElementById('viewOrderBody').innerHTML = `
+      <div class="p-3 pb-0">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+          <span class="badge bg-${statusColor} fs-6 px-3 py-2">${statusLabel}</span>
+          ${o.wasEditedByCustomer ? '<span class="badge bg-warning text-dark fs-6 px-3 py-2">تم تعديل الطلب من الزبون</span>' : ''}
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-sm-6">
+            <div class="rounded-3 p-3 h-100" style="background:white; border:1px solid #e9ecef;">
+              <div class="text-muted small mb-2"><i class="bi bi-person-circle me-1"></i>معلومات الزبون</div>
+              <div class="fw-bold fs-6">${o.customerName || ('زبون #' + o.customerId)}</div>
+              ${o.customerPhone ? `<div class="mt-1"><a href="tel:${o.customerPhone}" class="text-decoration-none"><i class="bi bi-telephone me-1" style="color:#daa520;"></i>${o.customerPhone}</a></div>` : ''}
+            </div>
+          </div>
+          <div class="col-sm-6">
+            <div class="rounded-3 p-3 h-100" style="background:white; border:1px solid #e9ecef;">
+              <div class="text-muted small mb-2"><i class="bi bi-truck me-1"></i>معلومات التوصيل</div>
+              <div class="mb-2"><span class="badge ${orderTypeBadgeClass}">${orderTypeText}</span></div>
+              ${o.deliveryAddress ? `<div class="fw-semibold"><i class="bi bi-geo-alt me-1" style="color:#daa520;"></i>${o.deliveryAddress}</div>` : '<div class="text-muted">لا يوجد عنوان</div>'}
+              ${o.deliveryDistanceKm ? `<div class="small text-muted mt-1"><i class="bi bi-arrows-move me-1"></i>${formatAmount(o.deliveryDistanceKm)} كم</div>` : ''}
+              ${o.driverId ? `<div class="small mt-1"><i class="bi bi-person-badge me-1" style="color:#daa520;"></i>السائق: ${o.driverId}</div>` : ''}
+            </div>
+          </div>
+        </div>
+        ${o.notes ? `<div class="rounded-3 p-3 mb-3" style="background:#fff8e1; border:1px solid #ffe082;"><i class="bi bi-sticky me-2" style="color:#daa520;"></i><span class="fw-semibold">ملاحظة: </span>${o.notes}</div>` : ''}
+      </div>
+      <div class="px-3">
+        <div class="rounded-3 p-3 mb-3" style="background:white; border:1px solid #e9ecef;">
+          <div class="text-muted small mb-2 fw-bold"><i class="bi bi-bag me-1"></i>الأصناف المطلوبة</div>
+          ${itemsHtml}
+        </div>
+        <div class="rounded-3 p-3 mb-3" style="background:white; border:1px solid #e9ecef;">
+          <div class="d-flex justify-content-between py-1"><span class="text-muted">المجموع الفرعي</span><span>${formatAmount(subtotal)}</span></div>
+          ${deliveryFee > 0 ? `<div class="d-flex justify-content-between py-1"><span class="text-muted">رسوم التوصيل</span><span>${formatAmount(deliveryFee)}</span></div>` : ''}
+          <div class="d-flex justify-content-between py-2 border-top mt-1">
+            <span class="fw-bold fs-6">الإجمالي</span>
+            <span class="fw-bold fs-5" style="color:#b8860b;">${formatAmount(total)}</span>
+          </div>
+        </div>
+        ${o.history && o.history.length > 0 ? `
+        <div class="rounded-3 p-3 mb-3" style="background:white; border:1px solid #e9ecef;">
+          <div class="text-muted small mb-3 fw-bold"><i class="bi bi-clock-history me-1"></i>سجل الحالات</div>
+          <div style="position:relative; padding-right:20px;">
+            <div style="position:absolute; right:7px; top:0; bottom:0; width:2px; background:#ffe082; border-radius:2px;"></div>
+            ${o.history.map((h, idx) => {
+              const hColors = ['primary','success','warning','info','secondary','success','danger'];
+              const hNames = ['طلب جديد','مؤكد','قيد التجهيز','جاهز للاستلام','مع السائق','تم التوصيل','تم الإلغاء'];
+              const byType = ['','زبون','مطعم','سائق','نظام'];
+              const hDate = h.changedAtUtc ? new Date(h.changedAtUtc).toLocaleString('ar-SA', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}) : '';
+              const isLast = idx === o.history.length - 1;
+              return `<div class="d-flex align-items-start gap-2 mb-3" style="position:relative;">
+                <div style="position:absolute; right:-20px; top:4px; width:14px; height:14px; border-radius:50%; background:${isLast ? '#daa520' : '#fff'}; border:2px solid #daa520; z-index:1;"></div>
+                <div class="flex-grow-1 rounded-2 p-2" style="background:${isLast ? '#fff8e1' : '#f8f9fa'}; border:1px solid ${isLast ? '#ffe082' : '#e9ecef'};">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <span class="badge bg-${hColors[h.status] || 'secondary'}">${hNames[h.status] || h.status}</span>
+                    <small class="text-muted">${hDate}</small>
+                  </div>
+                  ${h.changedByType ? `<div class="small text-muted mt-1"><i class="bi bi-person me-1"></i>${byType[h.changedByType] || ''}</div>` : ''}
+                  ${h.comment ? `<div class="small mt-1" style="color:#555;">${h.comment}</div>` : ''}
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+  } catch (e) {
+    console.error(e);
+    document.getElementById('viewOrderBody').innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-circle fs-3"></i><p class="mt-2">حدث خطأ أثناء تحميل البيانات</p></div>';
+  }
+};
+
+</script>
+}

@@ -1,0 +1,16 @@
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+rootProject.buildDir = '../build'
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+
+// Keep a top-level clean task compatible with modern Gradle.
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}

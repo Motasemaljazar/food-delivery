@@ -1,0 +1,620 @@
+@page
+@model AdminDashboard.Pages.Admin.AdminPageModel
+
+<h2 class="h5 mb-4">إعدادات النظام</h2>
+
+<form id="frm" class="card shadow-sm p-4 rounded-3" onsubmit="return false;">
+    <div class="row g-3">
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">اسم المطعم</label>
+            <input class="form-control" name="restaurantName" placeholder="أدخل اسم المطعم" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">شعار المطعم</label>
+            <input class="form-control" type="file" id="logoFile" accept="image/*" />
+            <div class="mt-2" id="logoPreview"></div>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label fw-semibold">حالة المطعم</label>
+            <select class="form-select" name="isManuallyClosed">
+                <option value="false">مفتوح</option>
+                <option value="true">مغلق</option>
+            </select>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">رسالة الإغلاق</label>
+            <input class="form-control" name="closedMessage" placeholder="المطعم مغلق حالياً" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">خلفية شاشة الإغلاق</label>
+            <input class="form-control" type="file" id="closedBgFile" accept="image/*" />
+            <div class="mt-2 small" id="closedBgPreview"></div>
+        </div>
+
+        <div class="col-12">
+            <hr class="my-2" />
+            <h3 class="h6 mb-2"></h3>
+            <div class="row g-2 align-items-end">
+                <div class="col-md-6">
+                    <label class="form-label">إضافة صور بنرات</label>
+                    <input class="form-control" type="file" id="bannerFiles" accept="image/*" multiple />
+                    <div class="form-text"></div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-primary w-100" type="button" id="btnAddBanners">رفع وإضافة</button>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-outline-danger w-100" type="button" id="btnClearBanners">حذف الكل</button>
+                </div>
+            </div>
+
+            <div class="mt-3" id="bannersList"></div>
+            <input type="hidden" name="homeBannersJson" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">سعر التوصيل لكل كيلومتر</label>
+            <input class="form-control" type="number" step="0.01" min="0" name="deliveryFeePerKm" placeholder="مثلاً 2.5 (تركه 0 = استخدام القيمة الثابتة من الإعدادات)" />
+            <div class="form-text">عند إنشاء الطلب يُحسب رسوم التوصيل تلقائياً = المسافة من المطعم × هذا السعر. يمكنك أيضاً تعديل رسوم التوصيل يدوياً من صفحة الطلبات.</div>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label fw-semibold">توصيل مجاني حتى مسافة (كم)</label>
+            <input class="form-control" type="number" step="0.1" min="0" name="freeDeliveryMaxKm" placeholder="مثلاً 3 (تركه 0 = تعطيل التوصيل المجاني)" />
+            <div class="form-text">إذا كانت المسافة بين المطعم والزبون أقل أو تساوي هذه القيمة بالكيلومترات يتم جعل رسوم التوصيل = 0 تلقائياً. اتركها 0 لتعطيل هذه الميزة.</div>
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">رقم الدعم</label>
+            <input class="form-control" name="supportPhone" placeholder="" />
+        </div>
+
+        <div class="col-md-6">
+            <label class="form-label">واتساب الدعم</label>
+            <input class="form-control" name="supportWhatsApp" placeholder="" />
+        </div>
+
+        <div class="col-12">
+            <hr class="my-2" />
+            <h3 class="h6 mb-2">روابط وسائل التواصل الاجتماعي</h3>
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">رابط Instagram</label>
+            <input class="form-control" name="instagramUrl" placeholder="https://instagram.com/..." />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">رابط Facebook</label>
+            <input class="form-control" name="facebookUrl" placeholder="https://facebook.com/..." />
+        </div>
+
+        <div class="col-md-4">
+            <label class="form-label">رابط Telegram</label>
+            <input class="form-control" name="telegramUrl" placeholder="https://t.me/..." />
+        </div>
+
+        <div class="col-12">
+            <hr class="my-2" />
+            <h3 class="h6 mb-2">موقع المطعم</h3>
+            <div class="d-flex gap-2 flex-wrap mb-2">
+                <button class="btn btn-outline-primary btn-sm" type="button" id="btnOpenMap">تحديد من الخريطة</button>
+                <button class="btn btn-outline-secondary btn-sm" type="button" id="btnGetLoc">تحديد تلقائي (موقعي الآن)</button>
+            </div>
+            <input type="hidden" name="restaurantLat" />
+            <input type="hidden" name="restaurantLng" />
+            <div id="mapSection" class="mt-2 d-none">
+                <div class="position-relative rounded-4 overflow-hidden border" style="height:340px">
+                    <div id="mapRestaurant" style="height:340px"></div>
+                    <!-- Professional Pulsing Circle Marker - Always Visible and Always Active -->
+                    <div id="pulseMarker" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:1000;display:none;">
+                        <!-- Outer Pulsing Circle -->
+                        <div class="pulse-circle outer" style="width:100px;height:100px;border-radius:50%;background:rgba(0,120,255,0.1);border:4px solid rgba(0,120,255,0.5);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+                        <!-- Middle Pulsing Circle -->
+                        <div class="pulse-circle middle" style="width:70px;height:70px;border-radius:50%;background:rgba(0,120,255,0.2);border:3px solid rgba(0,120,255,0.7);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+                        <!-- Inner Pulsing Circle -->
+                        <div class="pulse-circle inner" style="width:50px;height:50px;border-radius:50%;background:rgba(0,120,255,0.3);border:2px solid rgba(0,120,255,0.9);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+                        <!-- Center Pin -->
+                        <div class="center-pin" style="width:20px;height:20px;border-radius:50%;background:linear-gradient(135deg, #0078ff, #0055cc);border:4px solid white;box-shadow:0 0 20px rgba(0,120,255,0.9), 0 0 0 6px rgba(0,120,255,0.3);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;"></div>
+                        <!-- Pin Glow -->
+                        <div style="width:40px;height:40px;border-radius:50%;background:radial-gradient(circle, rgba(0,120,255,0.5) 0%, rgba(0,120,255,0) 80%);position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:5;"></div>
+                        <!-- Location Text -->
+                        <div style="position:absolute;top:calc(50% + 70px);left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.7);color:white;padding:4px 12px;border-radius:20px;font-size:12px;white-space:nowrap;backdrop-filter:blur(5px);">
+                            موقع المطعم الحالي
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-2 text-end">
+                    <button class="btn btn-sm btn-outline-secondary" type="button" id="btnCloseMap">إخفاء الخريطة</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12">
+            <button class="btn btn-primary" id="btnSave" type="button">حفظ</button>
+            <span class="me-2 small text-muted" id="status"></span>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        const frm = document.getElementById('frm');
+        const status = document.getElementById('status');
+
+        let current = {
+          restaurantName: '',
+          logoUrl: null,
+          isManuallyClosed: false,
+          closedMessage: 'المطعم مغلق حالياً',
+          closedScreenImageUrl: null,
+          homeBanners: [],
+          deliveryFeePerKm: 0,
+          supportPhone: '',
+          supportWhatsApp: '',
+          instagramUrl: '',
+          facebookUrl: '',
+          telegramUrl: '',
+          restaurantLat: 0,
+          restaurantLng: 0,
+          routingProfile: 'driving'
+        };
+
+        let map;
+        let mapReady = false;
+        let pulseMarker;
+        let currentLat = 0;
+        let currentLng = 0;
+        let markerShown = false;
+        const mapSection = document.getElementById('mapSection');
+
+        function fmt(n){
+          if(typeof n !== 'number' || !isFinite(n)) return '—';
+          return n.toFixed(6);
+        }
+
+        function setLatLng(lat, lng){
+          current.restaurantLat = lat;
+          current.restaurantLng = lng;
+          frm.restaurantLat.value = String(lat);
+          frm.restaurantLng.value = String(lng);
+          // Update global coordinates
+          currentLat = lat;
+          currentLng = lng;
+        }
+
+        function ensureMap(){
+          if(mapReady) return;
+          mapReady = true;
+          map = L.map('mapRestaurant', { zoomControl: true, attributionControl: false });
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
+
+          // Get pulse marker element
+          pulseMarker = document.getElementById('pulseMarker');
+
+          // Update marker position when map moves
+          map.on('move', ()=>{
+            const c = map.getCenter();
+            setLatLng(c.lat, c.lng);
+            if (markerShown) {
+              updateMarkerPosition();
+            }
+          });
+        }
+
+        async function uploadAsset(kind, file){
+          if(!file) return null;
+          const fd = new FormData();
+          fd.append('file', file);
+          const res = await fetch(`/api/admin/upload/asset?kind=${encodeURIComponent(kind)}`, {
+            method:'POST',
+            body: fd,
+            credentials: 'same-origin'
+          });
+          if(!res.ok) throw new Error('فشل رفع الملف');
+          const j = await res.json();
+          return j.url;
+        }
+
+        function setPreview(elId, url){
+          const el = document.getElementById(elId);
+          if(!el) return;
+          const u = url ? (url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now()) : null;
+          el.innerHTML = u ? `<a href="${u}" target="_blank">عرض</a> | <img src="${u}" style="height:44px;border-radius:10px;object-fit:cover;margin-inline-start:8px" />` : '<span class="text-muted">—</span>';
+        }
+
+        function setBannersJson(){
+          frm.homeBannersJson.value = JSON.stringify(current.homeBanners || []);
+        }
+
+        document.getElementById('btnOpenMap').addEventListener('click', ()=>{
+          mapSection.classList.remove('d-none');
+          ensureMap();
+          // عند الفتح، ركّز الخريطة على إحداثيات المطعم الحالية إن وُجدت
+          const lat = (current.restaurantLat && Math.abs(current.restaurantLat) > 0.000001) ? current.restaurantLat : 33.5138;
+          const lng = (current.restaurantLng && Math.abs(current.restaurantLng) > 0.000001) ? current.restaurantLng : 36.2765;
+          map.setView([lat, lng], (current.restaurantLat && current.restaurantLng) ? 16 : 13);
+        });
+
+        document.getElementById('btnCloseMap').addEventListener('click', ()=>{
+          mapSection.classList.add('d-none');
+        });
+
+        function renderBanners(){
+          const host = document.getElementById('bannersList');
+          if(!host) return;
+          const list = current.homeBanners || [];
+          setBannersJson();
+          if(list.length===0){
+            host.innerHTML = '<div class="text-muted small">لا توجد بنرات. ارفع صور لإظهار سلايدر أعلى تطبيق الزبون.</div>';
+            return;
+          }
+          host.innerHTML = `
+            <div class="d-flex flex-column gap-2">
+              ${list.map((u,i)=>`
+                <div class="d-flex align-items-center gap-2 border rounded-4 p-2">
+                  <img src="${u}${u.includes('?')?'&':'?'}v=${Date.now()}" style="height:54px;width:120px;object-fit:cover;border-radius:12px" />
+                  <div class="flex-grow-1 small text-muted" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${u}</div>
+                  <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-secondary" type="button" data-act="up" data-i="${i}">↑</button>
+                    <button class="btn btn-outline-secondary" type="button" data-act="down" data-i="${i}">↓</button>
+                    <button class="btn btn-outline-danger" type="button" data-act="del" data-i="${i}">حذف</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          `;
+
+          host.querySelectorAll('button[data-act]').forEach(b=>{
+            b.addEventListener('click', ()=>{
+              const act = b.getAttribute('data-act');
+              const i = parseInt(b.getAttribute('data-i')||'0',10);
+              const arr = [...(current.homeBanners||[])];
+              if(act==='del'){
+                arr.splice(i,1);
+              }else if(act==='up' && i>0){
+                const tmp = arr[i-1]; arr[i-1]=arr[i]; arr[i]=tmp;
+              }else if(act==='down' && i<arr.length-1){
+                const tmp = arr[i+1]; arr[i+1]=arr[i]; arr[i]=tmp;
+              }
+              current.homeBanners = arr;
+              renderBanners();
+            });
+          });
+        }
+
+        // Function to show the professional pulsing circle PERMANENTLY
+        function showPulseMarker() {
+          if (!pulseMarker) {
+            pulseMarker = document.getElementById('pulseMarker');
+            if (!pulseMarker) return;
+          }
+
+          // Show the pulse marker
+          pulseMarker.style.display = 'block';
+          markerShown = true;
+
+          // Start the animations
+          startPulseAnimations();
+        }
+
+        // Function to update marker position (keep it centered)
+        function updateMarkerPosition() {
+          if (!pulseMarker || !markerShown) return;
+          // Marker is already centered with CSS transform
+          // No need to update position as it's always at center
+        }
+
+        // Function to start pulse animations
+        function startPulseAnimations() {
+          if (!pulseMarker) return;
+
+          // Add animation classes to pulse circles
+          const outerCircle = pulseMarker.querySelector('.pulse-circle.outer');
+          const middleCircle = pulseMarker.querySelector('.pulse-circle.middle');
+          const innerCircle = pulseMarker.querySelector('.pulse-circle.inner');
+          const centerPin = pulseMarker.querySelector('.center-pin');
+
+          if (outerCircle) {
+            outerCircle.style.animation = 'pulse-outer 2s infinite';
+          }
+          if (middleCircle) {
+            middleCircle.style.animation = 'pulse-middle 1.5s infinite 0.3s';
+          }
+          if (innerCircle) {
+            innerCircle.style.animation = 'pulse-inner 1s infinite 0.6s';
+          }
+          if (centerPin) {
+            centerPin.style.animation = 'pin-pulse 2s infinite';
+          }
+        }
+
+        // Banners actions
+        document.getElementById('btnClearBanners').addEventListener('click', ()=>{
+          current.homeBanners = [];
+          renderBanners();
+          status.innerText = 'تم حذف البنرات (لم يتم الحفظ بعد)';
+        });
+
+        document.getElementById('btnAddBanners').addEventListener('click', async ()=>{
+          const input = document.getElementById('bannerFiles');
+          const files = Array.from(input.files || []);
+          if(files.length===0){ status.innerText = 'اختر صوراً أولاً'; return; }
+          status.innerText = 'جارٍ رفع البنرات...';
+          try{
+            for(const f of files){
+              const url = await uploadAsset('banner', f);
+              if(url) current.homeBanners = [...(current.homeBanners||[]), url];
+            }
+            input.value = '';
+            renderBanners();
+            status.innerText = 'تم إضافة البنرات ✅ (اضغط حفظ لتطبيقها)';
+          }catch(_){
+            status.innerText = 'فشل رفع إحدى الصور';
+          }
+        });
+
+        async function load(){
+          const res = await fetch('/api/admin/settings', { credentials: 'same-origin' });
+          if(!res.ok){ status.innerText='فشل تحميل الإعدادات'; return; }
+          const s = await res.json();
+
+          current.restaurantName = s.restaurantName || '';
+          current.logoUrl = s.logoUrl || null;
+          current.isManuallyClosed = !!s.isManuallyClosed;
+          current.closedMessage = s.closedMessage || 'المطعم مغلق حالياً';
+          current.closedScreenImageUrl = s.closedScreenImageUrl || null;
+          // Home banners (JSON array of URLs)
+          try{
+            const bj = s.homeBannersJson || s.homeBanners || null;
+            if(Array.isArray(bj)) current.homeBanners = bj;
+            else if(typeof bj === 'string' && bj.trim().length){
+              const parsed = JSON.parse(bj);
+              current.homeBanners = Array.isArray(parsed) ? parsed : [];
+            }else{
+              current.homeBanners = [];
+            }
+          }catch(_){ current.homeBanners = []; }
+          current.deliveryFeePerKm = (typeof s.deliveryFeePerKm === 'number') ? s.deliveryFeePerKm : (parseFloat(s.deliveryFeePerKm) || 0);
+          current.freeDeliveryMaxKm = (typeof s.freeDeliveryMaxKm === 'number') ? s.freeDeliveryMaxKm : (parseFloat(s.freeDeliveryMaxKm) || 0);
+          current.supportPhone = s.supportPhone || '';
+          current.supportWhatsApp = s.supportWhatsApp || '';
+          current.instagramUrl = s.instagramUrl || '';
+          current.facebookUrl = s.facebookUrl || '';
+          current.telegramUrl = s.telegramUrl || '';
+          current.restaurantLat = (typeof s.restaurantLat === 'number') ? s.restaurantLat : 0;
+          current.restaurantLng = (typeof s.restaurantLng === 'number') ? s.restaurantLng : 0;
+
+          frm.restaurantName.value = current.restaurantName;
+          frm.isManuallyClosed.value = current.isManuallyClosed ? 'true' : 'false';
+          frm.closedMessage.value = current.closedMessage;
+          if (frm.deliveryFeePerKm) frm.deliveryFeePerKm.value = current.deliveryFeePerKm > 0 ? String(current.deliveryFeePerKm) : '';
+          if (frm.freeDeliveryMaxKm) frm.freeDeliveryMaxKm.value = current.freeDeliveryMaxKm > 0 ? String(current.freeDeliveryMaxKm) : '';
+          frm.supportPhone.value = current.supportPhone;
+          frm.supportWhatsApp.value = current.supportWhatsApp;
+          frm.instagramUrl.value = current.instagramUrl;
+          frm.facebookUrl.value = current.facebookUrl;
+          frm.telegramUrl.value = current.telegramUrl;
+          frm.restaurantLat.value = String(current.restaurantLat || 0);
+          frm.restaurantLng.value = String(current.restaurantLng || 0);
+
+          setPreview('logoPreview', current.logoUrl);
+          setPreview('closedBgPreview', current.closedScreenImageUrl);
+          renderBanners();
+
+          ensureMap();
+          const lat = (current.restaurantLat && Math.abs(current.restaurantLat) > 0.000001) ? current.restaurantLat : 33.5138;
+          const lng = (current.restaurantLng && Math.abs(current.restaurantLng) > 0.000001) ? current.restaurantLng : 36.2765;
+          map.setView([lat, lng], (current.restaurantLat && current.restaurantLng) ? 16 : 13);
+          setLatLng(map.getCenter().lat, map.getCenter().lng);
+
+          // Show pulse marker immediately if we have valid coordinates
+          if (current.restaurantLat && current.restaurantLng &&
+              Math.abs(current.restaurantLat) > 0.000001 &&
+              Math.abs(current.restaurantLng) > 0.000001) {
+            setTimeout(() => {
+              showPulseMarker();
+            }, 500);
+          }
+        }
+
+        document.getElementById('btnGetLoc').addEventListener('click', ()=>{
+          ensureMap();
+          if(!navigator.geolocation){ status.innerText = 'المتصفح لا يدعم تحديد الموقع'; return; }
+          status.innerText = 'جارٍ تحديد الموقع...';
+          navigator.geolocation.getCurrentPosition(
+            (pos)=>{
+              const lat = pos.coords.latitude;
+              const lng = pos.coords.longitude;
+              map.setView([lat, lng], 17);
+              setLatLng(lat, lng);
+              status.innerText = 'تم تحديد الموقع ✅ ';
+
+              // Show professional pulsing circle PERMANENTLY
+              showPulseMarker();
+            },
+            (error)=>{
+              if (error.code === error.PERMISSION_DENIED) {
+                status.innerText = 'تم رفض الإذن. يرجى السماح بتحديد الموقع في إعدادات المتصفح.';
+              } else if (error.code === error.POSITION_UNAVAILABLE) {
+                status.innerText = 'معلومات الموقع غير متاحة.';
+              } else if (error.code === error.TIMEOUT) {
+                status.innerText = 'انتهت مهلة طلب الموقع.';
+              } else {
+                status.innerText = 'فشل تحديد الموقع (تأكد من السماح)';
+              }
+            },
+            { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+          );
+        });
+
+        document.getElementById('btnSave').addEventListener('click', async (ev)=>{
+          ev.preventDefault();
+          const btn = document.getElementById('btnSave');
+          btn.disabled = true;
+          status.innerText = 'جارٍ الحفظ...';
+
+          let logoUrl = current.logoUrl;
+          let closedBgUrl = current.closedScreenImageUrl;
+
+          const logoFile = document.getElementById('logoFile').files?.[0];
+          const bgFile = document.getElementById('closedBgFile').files?.[0];
+
+          try{
+            if(logoFile) logoUrl = await uploadAsset('logo', logoFile);
+            if(bgFile) closedBgUrl = await uploadAsset('closed', bgFile);
+          }catch(_){
+            status.innerText = 'فشل رفع الصور';
+            btn.disabled = false;
+            return;
+          }
+
+          const isClosed = frm.isManuallyClosed.value === 'true';
+          const deliveryFeePerKmVal = parseFloat((frm.deliveryFeePerKm && frm.deliveryFeePerKm.value) ? frm.deliveryFeePerKm.value : '0');
+          const freeDeliveryMaxKmVal = parseFloat((frm.freeDeliveryMaxKm && frm.freeDeliveryMaxKm.value) ? frm.freeDeliveryMaxKm.value : '0');
+          const payload = {
+            restaurantName: frm.restaurantName.value.trim(),
+            logoUrl,
+            isManuallyClosed: isClosed,
+            isAcceptingOrders: !isClosed,
+            closedMessage: frm.closedMessage.value.trim() || 'المطعم مغلق حالياً',
+            closedScreenImageUrl: closedBgUrl,
+            homeBannersJson: JSON.stringify(current.homeBanners || []),
+            deliveryFeePerKm: isFinite(deliveryFeePerKmVal) && deliveryFeePerKmVal >= 0 ? deliveryFeePerKmVal : 0,
+            freeDeliveryMaxKm: isFinite(freeDeliveryMaxKmVal) && freeDeliveryMaxKmVal > 0 ? freeDeliveryMaxKmVal : 0,
+            supportPhone: frm.supportPhone.value.trim(),
+            supportWhatsApp: frm.supportWhatsApp.value.trim(),
+            instagramUrl: frm.instagramUrl.value.trim(),
+            facebookUrl: frm.facebookUrl.value.trim(),
+            telegramUrl: frm.telegramUrl.value.trim(),
+            restaurantLat: parseFloat(frm.restaurantLat.value || '0') || 0,
+            restaurantLng: parseFloat(frm.restaurantLng.value || '0') || 0
+          };
+
+          const res = await fetch('/api/admin/settings', {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload),
+            credentials: 'same-origin'
+          });
+
+          const txt = await res.text();
+          let data = {};
+          try { data = txt ? JSON.parse(txt) : {}; } catch { data = { raw: txt }; }
+
+          if(!res.ok){
+            // Show more helpful info (and common auth hint)
+            if(res.status === 401 || res.status === 403) status.innerText = 'فشل الحفظ: انتهت جلسة تسجيل الدخول. أعد تسجيل الدخول ثم جرّب.';
+            else status.innerText = (data?.message ? data.message : 'فشل الحفظ') + (data?.error ? ` (${data.error})` : '');
+            btn.disabled = false;
+            return;
+          }
+
+          status.innerText = (data?.message ? data.message : 'تم الحفظ ✅');
+          try { if (window.reloadBranding) await window.reloadBranding(); } catch(_) {}
+
+          // Keep the pulse marker shown after saving
+          if (markerShown) {
+            status.innerText += '';
+          }
+
+          await load();
+          btn.disabled = false;
+        });
+
+        document.addEventListener('DOMContentLoaded', load);
+    </script>
+}
+
+<style>
+    @@keyframes pulse-outer {
+        0% {
+            transform: translate(-50%, -50%) scale(0.6);
+            opacity: 0.8;
+            box-shadow: 0 0 0 0 rgba(0, 120, 255, 0.4);
+        }
+
+        50% {
+            opacity: 0.6;
+            box-shadow: 0 0 0 30px rgba(0, 120, 255, 0);
+        }
+
+        70% {
+            transform: translate(-50%, -50%) scale(1.4);
+            opacity: 0.4;
+            box-shadow: 0 0 0 50px rgba(0, 120, 255, 0);
+        }
+
+        100% {
+            transform: translate(-50%, -50%) scale(0.6);
+            opacity: 0.8;
+            box-shadow: 0 0 0 0 rgba(0, 120, 255, 0);
+        }
+    }
+
+    @@keyframes pulse-middle {
+        0% {
+            transform: translate(-50%, -50%) scale(0.7);
+            opacity: 0.9;
+        }
+
+        50% {
+            transform: translate(-50%, -50%) scale(1.3);
+            opacity: 0.5;
+        }
+
+        100% {
+            transform: translate(-50%, -50%) scale(0.7);
+            opacity: 0.9;
+        }
+    }
+
+    @@keyframes pulse-inner {
+        0% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(0, 120, 255, 0.6);
+        }
+
+        70% {
+            transform: translate(-50%, -50%) scale(1.2);
+            opacity: 0.7;
+            box-shadow: 0 0 0 20px rgba(0, 120, 255, 0);
+        }
+
+        100% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 1;
+            box-shadow: 0 0 0 0 rgba(0, 120, 255, 0);
+        }
+    }
+
+    @@keyframes pin-pulse {
+        0%, 100% {
+            box-shadow: 0 0 0 0 rgba(0, 120, 255, 0.5), 0 0 0 6px rgba(0, 120, 255, 0.3);
+        }
+
+        50% {
+            box-shadow: 0 0 0 15px rgba(0, 120, 255, 0), 0 0 0 6px rgba(0, 120, 255, 0.3);
+        }
+    }
+
+    /* Ensure marker is above map and always visible */
+    #pulseMarker {
+        z-index: 1000 !important;
+    }
+
+    /* Smooth animations */
+    .pulse-circle {
+        animation-timing-function: ease-in-out;
+    }
+
+    .center-pin {
+        animation-timing-function: ease-out;
+    }
+</style>

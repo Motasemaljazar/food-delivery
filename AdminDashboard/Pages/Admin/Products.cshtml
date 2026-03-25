@@ -1,0 +1,491 @@
+@page
+@model AdminDashboard.Pages.Admin.AdminPageModel
+@{
+    ViewData["Title"] = "المنتجات";
+}
+
+<div class="admin-page-header">
+  <div class="page-icon"><i class="bi bi-box-seam"></i></div>
+  <div>
+    <h1 class="page-title">إدارة المنتجات</h1>
+    <p class="page-subtitle">منتجات المنيو والأسعار والأقسام</p>
+  </div>
+</div>
+
+<div id="statusMsg" class="alert d-none" role="alert"></div>
+
+<div class="admin-card">
+  <div class="admin-card-header">
+    <span>قائمة المنتجات</span>
+    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#prodModal" id="btnAddProd">
+      <i class="bi bi-plus-lg me-1"></i>إضافة منتج
+    </button>
+  </div>
+  <div class="admin-card-body p-0">
+    <div class="table-responsive admin-mobile-cards">
+      <table class="table table-hover table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>السعر</th>
+            <th>القسم</th>
+            <th>الحالة</th>
+            <th>التوفر</th>
+            <th class="text-center">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="prodTblBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- نافذة إضافة / تعديل منتج -->
+<div class="modal fade" id="prodModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="prodModalTitle">إضافة منتج</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="إغلاق"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="prodId" />
+        <div class="row g-2">
+          <div class="col-12">
+            <label class="form-label">اسم المنتج</label>
+            <input type="text" class="form-control" id="prodName" placeholder="اسم المنتج" />
+          </div>
+          <div class="col-12">
+            <label class="form-label">الوصف (اختياري)</label>
+            <textarea class="form-control" id="prodDesc" rows="2" placeholder="وصف المنتج"></textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">السعر</label>
+            <input type="number" step="0.01" min="0" class="form-control" id="prodPrice" value="0" placeholder="0" />
+          </div>
+          <div class="col-md-8">
+            <label class="form-label">القسم</label>
+            <select class="form-select" id="prodCat">
+              <option value="">اختر القسم...</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">الحالة</label>
+            <select class="form-select" id="prodActive">
+              <option value="true">مفعل</option>
+              <option value="false">موقوف</option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">التوفر</label>
+            <select class="form-select" id="prodAvailable">
+              <option value="true">متوفر</option>
+              <option value="false">غير متوفر</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">صور المنتج (اختياري)</label>
+            <input type="file" class="form-control" id="prodFiles" accept="image/*" multiple />
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" id="prodReplaceImages" />
+              <label class="form-check-label" for="prodReplaceImages">استبدال الصور الحالية عند التعديل</label>
+            </div>
+            <div id="prodImagesPreview" class="mt-2"></div>
+          </div>
+
+          <div class="col-12 mt-3 border-top pt-3">
+            <div class="fw-bold mb-2">الأنواع (اختيار واحد)</div>
+            <p class="small text-muted mb-2">مثل: صغير / وسط / كبير مع فرق سعر</p>
+            <div class="row g-2 mb-2">
+              <div class="col-md-4"><input type="text" class="form-control form-control-sm" id="varName" placeholder="الاسم" /></div>
+              <div class="col-md-3"><input type="number" step="0.01" class="form-control form-control-sm" id="varDelta" value="0" placeholder="فرق السعر" /></div>
+              <div class="col-md-2"><input type="number" class="form-control form-control-sm" id="varSort" value="0" placeholder="ترتيب" /></div>
+              <div class="col-md-2"><select class="form-select form-select-sm" id="varActive"><option value="true">مفعل</option><option value="false">موقوف</option></select></div>
+              <div class="col-md-1"><button type="button" class="btn btn-sm btn-primary w-100 d-flex align-items-center justify-content-center gap-1" id="varAddBtn"><i class="bi bi-plus-lg"></i> إضافة</button></div>
+            </div>
+            <input type="hidden" id="varEditKey" />
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>الاسم</th><th>فرق السعر</th><th>ترتيب</th><th>مفعل</th><th class="text-center" style="width:120px">إجراءات</th></tr></thead><tbody id="varTblBody"></tbody></table>
+            </div>
+          </div>
+
+          <div class="col-12 mt-3 border-top pt-3">
+            <div class="fw-bold mb-2">الإضافات (اختيارات متعددة)</div>
+            <p class="small text-muted mb-2">مثل: جبن إضافي، صلصة، مع فرق سعر</p>
+            <div class="row g-2 mb-2">
+              <div class="col-md-4"><input type="text" class="form-control form-control-sm" id="addName" placeholder="الاسم" /></div>
+              <div class="col-md-3"><input type="number" step="0.01" class="form-control form-control-sm" id="addPrice" value="0" placeholder="السعر" /></div>
+              <div class="col-md-2"><input type="number" class="form-control form-control-sm" id="addSort" value="0" placeholder="ترتيب" /></div>
+              <div class="col-md-2"><select class="form-select form-select-sm" id="addActive"><option value="true">مفعل</option><option value="false">موقوف</option></select></div>
+              <div class="col-md-1"><button type="button" class="btn btn-sm btn-primary w-100 d-flex align-items-center justify-content-center gap-1" id="addAddBtn"><i class="bi bi-plus-lg"></i> إضافة</button></div>
+            </div>
+            <input type="hidden" id="addEditKey" />
+            <div class="table-responsive">
+              <table class="table table-sm table-bordered mb-0"><thead class="table-light"><tr><th>الاسم</th><th>السعر</th><th>ترتيب</th><th>مفعل</th><th class="text-center" style="width:120px">إجراءات</th></tr></thead><tbody id="addTblBody"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button type="button" class="btn btn-primary" id="prodSaveModal">حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+  const tbody = document.getElementById('prodTblBody');
+  const modalEl = document.getElementById('prodModal');
+  const modal = new bootstrap.Modal(modalEl);
+  const modalTitle = document.getElementById('prodModalTitle');
+  let menuData = { categories: [], products: [], images: [], variants: [], addons: [] };
+  let pendingVariants = [];
+  let pendingAddons = [];
+
+  function showStatus(text, ok){
+    const el = document.getElementById('statusMsg');
+    el.textContent = text;
+    el.className = 'alert ' + (ok ? 'alert-success' : 'alert-danger') + ' mt-2';
+    el.classList.remove('d-none');
+    clearTimeout(window._prodStatusTimer);
+    window._prodStatusTimer = setTimeout(() => el.classList.add('d-none'), 3500);
+  }
+
+  function esc(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  function yesNo(v){ return v ? 'نعم' : 'لا'; }
+
+  function catNameById(id){
+    const c = menuData.categories.find(x => x.id === id);
+    return c ? c.name : ('#' + id);
+  }
+
+  function renderProdImages(productId){
+    const box = document.getElementById('prodImagesPreview');
+    const imgs = (menuData.images || []).filter(i => i.productId === productId).sort((a,b) => (a.sortOrder||0) - (b.sortOrder||0));
+    if(!productId || imgs.length === 0){ box.innerHTML = '<span class="text-muted small">لا توجد صور</span>'; return; }
+    box.innerHTML = '<div class="d-flex flex-wrap gap-2">' + imgs.map(i => '<img src="' + esc(i.url) + '" style="width:60px;height:60px;object-fit:cover" class="rounded border" />').join('') + '</div>';
+  }
+
+  function getCurrentProductId(){
+    const v = document.getElementById('prodId').value;
+    return v ? parseInt(v, 10) : null;
+  }
+
+  function getVariantsForProduct(){
+    const pid = getCurrentProductId();
+    if(pid) return (menuData.variants || []).filter(v => v.productId === pid).sort((a,b) => (a.sortOrder||0) - (b.sortOrder||0));
+    return pendingVariants.slice();
+  }
+
+  function getAddonsForProduct(){
+    const pid = getCurrentProductId();
+    if(pid) return (menuData.addons || []).filter(a => a.productId === pid).sort((a,b) => (a.sortOrder||0) - (b.sortOrder||0));
+    return pendingAddons.slice();
+  }
+
+  function renderVarTable(){
+    const rows = getVariantsForProduct();
+    const pid = getCurrentProductId();
+    const tbody = document.getElementById('varTblBody');
+    const yesNo = v => v ? 'نعم' : 'لا';
+    if(rows.length === 0){ tbody.innerHTML = '<tr><td colspan="5" class="text-muted small">لا توجد أنواع. أضف من الحقول أعلاه.</td></tr>'; return; }
+    tbody.innerHTML = rows.map((r, i) => {
+      const key = r.id != null ? 'v' + r.id : 'p' + i;
+      const name = esc(r.name || '');
+      const delta = Number(r.priceDelta != null ? r.priceDelta : 0).toFixed(2);
+      const sort = r.sortOrder != null ? r.sortOrder : 0;
+      return '<tr><td>' + name + '</td><td>' + delta + '</td><td>' + sort + '</td><td>' + yesNo(r.isActive) + '</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="window.prodEditVariant(\'' + key + '\')">تعديل</button><button type="button" class="btn btn-sm btn-outline-danger" onclick="window.prodDeleteVariant(\'' + key + '\')">حذف</button></td></tr>';
+    }).join('');
+  }
+
+  function renderAddTable(){
+    const rows = getAddonsForProduct();
+    const pid = getCurrentProductId();
+    const tbody = document.getElementById('addTblBody');
+    const yesNo = v => v ? 'نعم' : 'لا';
+    if(rows.length === 0){ tbody.innerHTML = '<tr><td colspan="5" class="text-muted small">لا توجد إضافات. أضف من الحقول أعلاه.</td></tr>'; return; }
+    tbody.innerHTML = rows.map((a, i) => {
+      const key = a.id != null ? 'a' + a.id : 'q' + i;
+      const name = esc(a.name || '');
+      const price = Number(a.price != null ? a.price : 0).toFixed(2);
+      const sort = a.sortOrder != null ? a.sortOrder : 0;
+      return '<tr><td>' + name + '</td><td>' + price + '</td><td>' + sort + '</td><td>' + yesNo(a.isActive) + '</td><td class="text-end"><button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="window.prodEditAddon(\'' + key + '\')">تعديل</button><button type="button" class="btn btn-sm btn-outline-danger" onclick="window.prodDeleteAddon(\'' + key + '\')">حذف</button></td></tr>';
+    }).join('');
+  }
+
+  function clearVarForm(){
+    document.getElementById('varName').value = '';
+    document.getElementById('varDelta').value = '0';
+    document.getElementById('varSort').value = '0';
+    document.getElementById('varActive').value = 'true';
+    document.getElementById('varEditKey').value = '';
+    document.getElementById('varAddBtn').textContent = 'إضافة';
+  }
+
+  function clearAddForm(){
+    document.getElementById('addName').value = '';
+    document.getElementById('addPrice').value = '0';
+    document.getElementById('addSort').value = '0';
+    document.getElementById('addActive').value = 'true';
+    document.getElementById('addEditKey').value = '';
+    document.getElementById('addAddBtn').textContent = 'إضافة';
+  }
+
+  window.prodEditVariant = function(key){
+    const pid = getCurrentProductId();
+    const rows = getVariantsForProduct();
+    let r, idx;
+    if(key.startsWith('v')){ idx = rows.findIndex(x => x.id === parseInt(key.slice(1), 10)); r = idx >= 0 ? rows[idx] : null; }
+    else if(key.startsWith('p')){ idx = parseInt(key.slice(1), 10); r = rows[idx] || null; }
+    if(!r) return;
+    document.getElementById('varName').value = r.name || '';
+    document.getElementById('varDelta').value = r.priceDelta != null ? r.priceDelta : 0;
+    document.getElementById('varSort').value = r.sortOrder != null ? r.sortOrder : 0;
+    document.getElementById('varActive').value = String(r.isActive !== false);
+    document.getElementById('varEditKey').value = key;
+    document.getElementById('varAddBtn').textContent = 'تحديث';
+  };
+
+  window.prodDeleteVariant = async function(key){
+    const pid = getCurrentProductId();
+    if(key.startsWith('v')){
+      const id = parseInt(key.slice(1), 10);
+      if(!confirm('حذف هذا النوع؟')) return;
+      const res = await fetch('/api/admin/menu/variant/' + id, { method: 'DELETE', credentials: 'include' });
+      if(res.ok){ await load(); renderVarTable(); clearVarForm(); showStatus('تم حذف النوع', true); }
+    } else if(key.startsWith('p')){
+      const idx = parseInt(key.slice(1), 10);
+      pendingVariants.splice(idx, 1);
+      renderVarTable();
+      clearVarForm();
+    }
+  };
+
+  window.prodEditAddon = function(key){
+    const rows = getAddonsForProduct();
+    let r;
+    if(key.startsWith('a')){ r = rows.find(x => x.id === parseInt(key.slice(1), 10)); }
+    else if(key.startsWith('q')){ const idx = parseInt(key.slice(1), 10); r = rows[idx] || null; }
+    if(!r) return;
+    document.getElementById('addName').value = r.name || '';
+    document.getElementById('addPrice').value = r.price != null ? r.price : 0;
+    document.getElementById('addSort').value = r.sortOrder != null ? r.sortOrder : 0;
+    document.getElementById('addActive').value = String(r.isActive !== false);
+    document.getElementById('addEditKey').value = key;
+    document.getElementById('addAddBtn').textContent = 'تحديث';
+  };
+
+  window.prodDeleteAddon = async function(key){
+    const pid = getCurrentProductId();
+    if(key.startsWith('a')){
+      const id = parseInt(key.slice(1), 10);
+      if(!confirm('حذف هذه الإضافة؟')) return;
+      const res = await fetch('/api/admin/menu/addon/' + id, { method: 'DELETE', credentials: 'include' });
+      if(res.ok){ await load(); renderAddTable(); clearAddForm(); showStatus('تم حذف الإضافة', true); }
+    } else if(key.startsWith('q')){
+      const idx = parseInt(key.slice(1), 10);
+      pendingAddons.splice(idx, 1);
+      renderAddTable();
+      clearAddForm();
+    }
+  };
+
+  async function load(){
+    const res = await fetch('/api/admin/menu', { credentials: 'include' });
+    if(!res.ok){ tbody.innerHTML = '<tr><td colspan="7">فشل التحميل. تحقق من صلاحيات الدخول.</td></tr>'; return; }
+    menuData = await res.json();
+    const cats = menuData.categories || [];
+    const prods = menuData.products || [];
+
+    const catSelect = document.getElementById('prodCat');
+    catSelect.innerHTML = '<option value="">اختر القسم...</option>' + cats.map(c => '<option value="' + c.id + '">' + esc(c.name) + '</option>').join('');
+
+    tbody.innerHTML = prods.length ? prods.map(p => '<tr><td data-label="#">' + p.id + '</td><td data-label="الاسم">' + esc(p.name) + '</td><td data-label="السعر">' + Number(p.price||0).toFixed(2) + '</td><td data-label="القسم">' + esc(catNameById(p.categoryId)) + '</td><td data-label="الحالة">' + yesNo(p.isActive) + '</td><td data-label="التوفر">' + yesNo(p.isAvailable) + '</td><td class="text-end mobile-actions-cell" data-label=""><button class="btn btn-sm btn-outline-primary me-1" onclick="window.editProduct(' + p.id + ')">تعديل</button><button class="btn btn-sm btn-outline-danger" onclick="window.deleteProduct(' + p.id + ')">حذف</button></td></tr>').join('') : '<tr><td colspan="7">لا توجد منتجات. اضغط «إضافة منتج» للبدء.</td></tr>';
+  }
+
+  window.editProduct = function(id){
+    const p = (menuData.products || []).find(x => x.id === id);
+    if(!p) return;
+    pendingVariants = [];
+    pendingAddons = [];
+    document.getElementById('prodId').value = p.id;
+    document.getElementById('prodName').value = p.name || '';
+    document.getElementById('prodDesc').value = p.description || '';
+    document.getElementById('prodPrice').value = p.price ?? 0;
+    document.getElementById('prodCat').value = p.categoryId || '';
+    document.getElementById('prodActive').value = String(p.isActive);
+    document.getElementById('prodAvailable').value = String(p.isAvailable !== false);
+    document.getElementById('prodFiles').value = '';
+    document.getElementById('prodReplaceImages').checked = false;
+    clearVarForm();
+    clearAddForm();
+    modalTitle.textContent = 'تعديل المنتج';
+    renderProdImages(p.id);
+    renderVarTable();
+    renderAddTable();
+    modal.show();
+  };
+
+  window.deleteProduct = async function(id){
+    if(!confirm('حذف هذا المنتج؟')) return;
+    const res = await fetch('/api/admin/menu/product/' + id, { method: 'DELETE', credentials: 'include' });
+    if(res.ok){ showStatus('تم حذف المنتج', true); load(); }
+    else showStatus('فشل حذف المنتج', false);
+  };
+
+  document.getElementById('btnAddProd').addEventListener('click', function(){
+    pendingVariants = [];
+    pendingAddons = [];
+    document.getElementById('prodId').value = '';
+    document.getElementById('prodName').value = '';
+    document.getElementById('prodDesc').value = '';
+    document.getElementById('prodPrice').value = '0';
+    document.getElementById('prodCat').value = '';
+    document.getElementById('prodActive').value = 'true';
+    document.getElementById('prodAvailable').value = 'true';
+    document.getElementById('prodFiles').value = '';
+    document.getElementById('prodReplaceImages').checked = false;
+    document.getElementById('prodImagesPreview').innerHTML = '';
+    clearVarForm();
+    clearAddForm();
+    modalTitle.textContent = 'إضافة منتج';
+    renderVarTable();
+    renderAddTable();
+  });
+
+  document.getElementById('prodSaveModal').addEventListener('click', async function(){
+    const name = document.getElementById('prodName').value.trim();
+    const catVal = document.getElementById('prodCat').value;
+    const priceVal = document.getElementById('prodPrice').value;
+    if(!name){ showStatus('أدخل اسم المنتج', false); return; }
+    if(!catVal){ showStatus('اختر القسم', false); return; }
+    const categoryId = parseInt(catVal, 10);
+    if(Number.isNaN(categoryId)){ showStatus('القسم غير صالح', false); return; }
+    const price = parseFloat((priceVal||'0').toString().replace(',','.'));
+    if(Number.isNaN(price) || price < 0){ showStatus('السعر غير صالح', false); return; }
+
+    const payload = {
+      id: document.getElementById('prodId').value ? parseInt(document.getElementById('prodId').value, 10) : null,
+      categoryId: categoryId,
+      name: name,
+      description: document.getElementById('prodDesc').value || '',
+      price: price,
+      isActive: document.getElementById('prodActive').value === 'true',
+      isAvailable: document.getElementById('prodAvailable').value === 'true',
+      imageUrls: null
+    };
+    const res = await fetch('/api/admin/menu/product', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'include' });
+    if(!res.ok){ showStatus('فشل حفظ المنتج', false); return; }
+    const saved = await res.json();
+    const productId = saved.id;
+
+    const filesInput = document.getElementById('prodFiles');
+    if(filesInput.files && filesInput.files.length > 0){
+      const replace = document.getElementById('prodReplaceImages').checked;
+      if(replace) await fetch('/api/admin/upload/product-images/' + productId, { method: 'DELETE', credentials: 'include' });
+      const fd = new FormData();
+      for(let i = 0; i < filesInput.files.length; i++) fd.append('files', filesInput.files[i]);
+      const up = await fetch('/api/admin/upload/product-images/' + productId, { method: 'POST', body: fd, credentials: 'include' });
+      if(!up.ok) showStatus('تم حفظ المنتج لكن فشل رفع بعض الصور', false);
+    }
+
+    for(const v of pendingVariants){
+      const resV = await fetch('/api/admin/menu/variant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: null, productId: productId, name: v.name, priceDelta: Number(v.priceDelta) || 0, isActive: v.isActive !== false, sortOrder: Number(v.sortOrder) || 0 }), credentials: 'include' });
+      if(!resV.ok) showStatus('فشل حفظ أحد الأنواع', false);
+    }
+    for(const a of pendingAddons){
+      const resA = await fetch('/api/admin/menu/addon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: null, productId: productId, name: a.name, price: Number(a.price) || 0, isActive: a.isActive !== false, sortOrder: Number(a.sortOrder) || 0 }), credentials: 'include' });
+      if(!resA.ok) showStatus('فشل حفظ إحدى الإضافات', false);
+    }
+
+    modal.hide();
+    showStatus('تم حفظ المنتج' + (pendingVariants.length || pendingAddons.length ? ' والخيارات' : ''), true);
+    load();
+  });
+
+  document.getElementById('varAddBtn').addEventListener('click', async function(){
+    const name = document.getElementById('varName').value.trim();
+    if(!name){ showStatus('أدخل اسم النوع', false); return; }
+    const pid = getCurrentProductId();
+    const payload = { id: null, productId: pid, name: name, priceDelta: parseFloat((document.getElementById('varDelta').value||'0').toString().replace(',','.')) || 0, isActive: document.getElementById('varActive').value === 'true', sortOrder: parseInt(document.getElementById('varSort').value||'0', 10) || 0 };
+    const editKey = document.getElementById('varEditKey').value;
+    if(editKey){
+      if(editKey.startsWith('v')){
+        const id = parseInt(editKey.slice(1), 10);
+        payload.id = id;
+        payload.productId = pid;
+        const res = await fetch('/api/admin/menu/variant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'include' });
+        if(!res.ok){ showStatus('فشل تحديث النوع', false); return; }
+        await load();
+        renderVarTable();
+        clearVarForm();
+        showStatus('تم تحديث النوع', true);
+      } else {
+        const idx = parseInt(editKey.slice(1), 10);
+        pendingVariants[idx] = { name: payload.name, priceDelta: payload.priceDelta, isActive: payload.isActive, sortOrder: payload.sortOrder };
+        renderVarTable();
+        clearVarForm();
+      }
+      return;
+    }
+    if(pid){
+      const res = await fetch('/api/admin/menu/variant', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'include' });
+      if(!res.ok){ showStatus('فشل إضافة النوع', false); return; }
+      await load();
+      renderVarTable();
+      clearVarForm();
+      showStatus('تم إضافة النوع', true);
+    } else {
+      pendingVariants.push(payload);
+      renderVarTable();
+      clearVarForm();
+    }
+  });
+
+  document.getElementById('addAddBtn').addEventListener('click', async function(){
+    const name = document.getElementById('addName').value.trim();
+    if(!name){ showStatus('أدخل اسم الإضافة', false); return; }
+    const pid = getCurrentProductId();
+    const payload = { id: null, productId: pid, name: name, price: parseFloat((document.getElementById('addPrice').value||'0').toString().replace(',','.')) || 0, isActive: document.getElementById('addActive').value === 'true', sortOrder: parseInt(document.getElementById('addSort').value||'0', 10) || 0 };
+    const editKey = document.getElementById('addEditKey').value;
+    if(editKey){
+      if(editKey.startsWith('a')){
+        const id = parseInt(editKey.slice(1), 10);
+        payload.id = id;
+        payload.productId = pid;
+        const res = await fetch('/api/admin/menu/addon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'include' });
+        if(!res.ok){ showStatus('فشل تحديث الإضافة', false); return; }
+        await load();
+        renderAddTable();
+        clearAddForm();
+        showStatus('تم تحديث الإضافة', true);
+      } else {
+        const idx = parseInt(editKey.slice(1), 10);
+        pendingAddons[idx] = { name: payload.name, price: payload.price, isActive: payload.isActive, sortOrder: payload.sortOrder };
+        renderAddTable();
+        clearAddForm();
+      }
+      return;
+    }
+    if(pid){
+      const res = await fetch('/api/admin/menu/addon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), credentials: 'include' });
+      if(!res.ok){ showStatus('فشل إضافة الإضافة', false); return; }
+      await load();
+      renderAddTable();
+      clearAddForm();
+      showStatus('تم إضافة الإضافة', true);
+    } else {
+      pendingAddons.push(payload);
+      renderAddTable();
+      clearAddForm();
+    }
+  });
+
+  load();
+})();
+</script>
+}

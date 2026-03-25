@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title id="pageTitle">لوحة تحكم المطعم</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+  <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body class="admin-dashboard">
+@if (User?.Identity?.IsAuthenticated == true)
+{
+  <div class="d-flex admin-wrap" style="min-height:100vh">
+    <div class="admin-sidebar-overlay" id="adminSidebarOverlay" aria-hidden="true"></div>
+    <aside class="admin-aside admin-aside-fixed text-white p-3" id="adminSidebar" style="width:280px" aria-label="القائمة الجانبية">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <a class="text-white text-decoration-none fw-bold d-flex align-items-center gap-2" href="/Admin/Orders" style="max-width:100%">
+          <img id="brandLogo" src="" alt="شعار المطعم" style="width:34px;height:34px;border-radius:10px;object-fit:cover;display:none" />
+          <span id="brandName" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">لوحة التحكم</span>
+        </a>
+      </div>
+
+      <div class="small text-white-50 mb-3" id="brandSubtitle">نظام إدارة التوصيل</div>
+
+      <div class="list-group list-group-flush admin-nav-list" id="sidebar">
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Orders">
+          الطلبات <span class="badge bg-danger ms-2" id="badgeOrders" style="display:none"></span>
+        </a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/DeliveredOrders">الطلبات المسلمة</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Categories">الأقسام</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Products">المنتجات</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Offers">العروض</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Drivers">
+          السائقون <span class="badge bg-info ms-2" id="badgeDrivers" style="display:none"></span>
+        </a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/LiveMap">الخريطة الحية</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Customers">الزبائن</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Chats">
+          المحادثات <span class="badge bg-warning text-dark ms-2" id="badgeChats" style="display:none"></span>
+        </a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Settings">الإعدادات</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Reports">التقارير</a>
+        <a class="list-group-item list-group-item-action admin-nav-item" href="/Admin/Profile">حساب الإدارة</a>
+      </div>
+
+      <hr class="border-secondary" />
+      <a class="btn admin-logout w-100" href="/Logout">تسجيل خروج</a>
+    </aside>
+
+    <main class="flex-grow-1 admin-main-wrap">
+      <nav class="navbar admin-navbar border-bottom">
+        <div class="container-fluid d-flex align-items-center">
+          <button type="button" class="btn btn-link text-dark d-lg-none me-2 p-2 admin-sidebar-toggle" id="adminSidebarToggle" aria-label="فتح القائمة">
+            <i class="bi bi-list" style="font-size:1.5rem"></i>
+          </button>
+          <span class="navbar-text">مرحباً، @User.Identity?.Name</span>
+        </div>
+      </nav>
+      <div class="container py-4 admin-main">
+        @RenderBody()
+      </div>
+    </main>
+  </div>
+}
+else
+{
+  <div class="container py-4">
+    @RenderBody()
+  </div>
+}
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index:1080">
+  <div id="toastContainer" class="toast-container"></div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+<script src="~/js/site.js"></script>
+<script>
+(function(){
+  if(document.body.classList.contains('admin-dashboard')){
+    document.documentElement.classList.add('admin-dashboard-root');
+  }
+  var sidebar = document.getElementById('adminSidebar');
+  var overlay = document.getElementById('adminSidebarOverlay');
+  var toggle = document.getElementById('adminSidebarToggle');
+  if(!sidebar || !overlay) return;
+  function open(){ sidebar.classList.add('admin-aside-open'); overlay.classList.add('show'); overlay.setAttribute('aria-hidden','false'); document.body.classList.add('admin-sidebar-open'); }
+  function close(){ sidebar.classList.remove('admin-aside-open'); overlay.classList.remove('show'); overlay.setAttribute('aria-hidden','true'); document.body.classList.remove('admin-sidebar-open'); }
+  function toggleSidebar(){ sidebar.classList.contains('admin-aside-open') ? close() : open(); }
+  if(toggle) toggle.addEventListener('click', toggleSidebar);
+  overlay.addEventListener('click', close);
+  document.querySelectorAll('.admin-nav-list a').forEach(function(a){ a.addEventListener('click', function(){ if(window.innerWidth < 992) close(); }); });
+  window.addEventListener('resize', function(){ if(window.innerWidth >= 992) close(); });
+
+  // عند وجود المؤشر على القائمة الجانبية والتمرير بالدولاب، نمرّر القائمة وليس الصفحة
+  sidebar.addEventListener('wheel', function(e){
+    var canScrollUp = sidebar.scrollTop > 0;
+    var canScrollDown = sidebar.scrollTop < sidebar.scrollHeight - sidebar.clientHeight - 1;
+    var delta = e.deltaY || e.deltaX;
+    if (delta > 0 && canScrollDown) { e.preventDefault(); sidebar.scrollTop += Math.min(delta, 80); }
+    if (delta < 0 && canScrollUp)   { e.preventDefault(); sidebar.scrollTop += Math.max(delta, -80); }
+  }, { passive: false });
+})();
+</script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

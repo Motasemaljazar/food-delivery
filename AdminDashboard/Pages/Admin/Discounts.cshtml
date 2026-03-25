@@ -1,0 +1,281 @@
+@page
+@model AdminDashboard.Pages.Admin.AdminPageModel
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h2 class="h5 m-0">الخصومات التلقائية</h2>
+  <div class="d-flex gap-2 align-items-center">
+    <button class="btn btn-primary btn-sm" id="btnNew">إضافة خصم</button>
+    <button class="btn btn-outline-secondary btn-sm" id="btnRefresh">تحديث</button>
+  </div>
+</div>
+
+<div class="card p-3 rounded-4">
+  <div class="alert alert-info small mb-3">
+    ✅ النظام يطبق الخصم تلقائياً (بدون كود خصم). يمكنك عمل خصم على <b>فئة</b> أو <b>صنف</b> فقط.
+    <br />
+    - خصم الفئة يُطبق على <b>كل أصناف الفئة</b>.
+    <br />
+    - خصم الصنف يُطبق على <b>هذا الصنف فقط</b>.
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>النوع</th>
+          <th>الهدف</th>
+          <th>الخصم</th>
+          <th>الحالة</th>
+          <th>الفترة</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="7" class="text-muted">جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="dlg" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content rounded-4">
+      <div class="modal-header">
+        <h5 class="modal-title">خصم تلقائي</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2">
+          <div class="col-md-3">
+            <label class="form-label small">النوع</label>
+            <select class="form-select" id="targetType">
+              <option value="2">فئة</option>
+              <option value="1">صنف</option>
+            </select>
+          </div>
+
+          <div class="col-md-6" id="wrapCategory">
+            <label class="form-label small">اختر الفئة</label>
+            <select class="form-select" id="categoryId"></select>
+          </div>
+
+          <div class="col-md-6" id="wrapProduct" style="display:none">
+            <label class="form-label small">اختر الصنف</label>
+            <select class="form-select" id="productId"></select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label small">قيمة الخصم %</label>
+            <input class="form-control" id="percent" type="number" step="1" min="1" max="100" placeholder="مثال: 10" />
+          </div>
+
+          <div class="col-md-4">
+            <label class="form-label small">من (اختياري)</label>
+            <input class="form-control" id="fromUtc" type="datetime-local" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label small">إلى (اختياري)</label>
+            <input class="form-control" id="toUtc" type="datetime-local" />
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="isActive" checked>
+              <label class="form-check-label">مفعل</label>
+            </div>
+          </div>
+
+          <div class="col-12">
+            <div class="alert alert-warning small mb-0">
+              ملاحظة: عند وجود خصم على الصنف وخصم على فئته، النظام يختار <b>الأفضل</b> (الخصم الأكبر).
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-danger me-auto" id="btnDelete" style="display:none">حذف</button>
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">إلغاء</button>
+        <button class="btn btn-primary" id="btnSave">حفظ</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+@section Scripts {
+<script>
+const rows = document.getElementById('rows');
+const dlgEl = document.getElementById('dlg');
+const dlg = new bootstrap.Modal(dlgEl);
+let currentId = null;
+
+const els = {
+  targetType: document.getElementById('targetType'),
+  categoryId: document.getElementById('categoryId'),
+  productId: document.getElementById('productId'),
+  percent: document.getElementById('percent'),
+  fromUtc: document.getElementById('fromUtc'),
+  toUtc: document.getElementById('toUtc'),
+  isActive: document.getElementById('isActive'),
+  wrapCategory: document.getElementById('wrapCategory'),
+  wrapProduct: document.getElementById('wrapProduct'),
+};
+
+const map = {
+  categories: [],
+  products: [],
+  catById: new Map(),
+  prodById: new Map(),
+};
+
+function esc(s){ return (s||'').toString().replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+function typeName(t){ return t==1?'صنف':'فئة'; }
+
+function toLocalInput(iso){
+  if(!iso) return '';
+  const d=new Date(iso);
+  const pad=(n)=> String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+async function loadMenuMaps(){
+  const res = await fetch('/api/admin/menu');
+  if(!res.ok) throw new Error('فشل تحميل القائمة');
+  const j = await res.json();
+  map.categories = (j.categories||[]).filter(x=> x.isActive);
+  map.products = (j.products||[]).filter(x=> x.isActive);
+  map.catById = new Map(map.categories.map(c=> [c.id, c]));
+  map.prodById = new Map(map.products.map(p=> [p.id, p]));
+
+  // Fill selects
+  els.categoryId.innerHTML = map.categories.map(c=> `<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  els.productId.innerHTML = map.products.map(p=> `<option value="${p.id}">${esc(p.name)} <span class='text-muted'>#${p.id}</span></option>`).join('');
+}
+
+async function load(){
+  rows.innerHTML = '<tr><td colspan="7" class="text-muted">جاري التحميل...</td></tr>';
+  const res = await fetch('/api/admin/discounts');
+  if(!res.ok){ rows.innerHTML = '<tr><td colspan="7" class="text-danger">فشل التحميل</td></tr>'; return; }
+  const j = await res.json();
+  const items = (j.items || []).filter(x=> x.targetType==1 || x.targetType==2);
+  if(items.length===0){ rows.innerHTML = '<tr><td colspan="7" class="text-muted">لا يوجد خصومات بعد</td></tr>'; return; }
+
+  rows.innerHTML = items.map(x=>{
+    const period = `${x.startsAtUtc? new Date(x.startsAtUtc).toLocaleString(): '—'} → ${x.endsAtUtc? new Date(x.endsAtUtc).toLocaleString(): '—'}`;
+    let targetName = '—';
+    if(x.targetType==2){
+      const c = map.catById.get(x.targetId);
+      targetName = c ? c.name : `#${x.targetId}`;
+    } else {
+      const p = map.prodById.get(x.targetId);
+      targetName = p ? p.name : `#${x.targetId}`;
+    }
+    return `<tr>
+      <td>${x.id}</td>
+      <td>${typeName(x.targetType)}</td>
+      <td>${esc(targetName)}</td>
+      <td><span class="badge bg-warning text-dark">${Math.round((x.percent??0))}%</span></td>
+      <td>${x.isActive? '<span class="badge bg-success">مفعل</span>':'<span class="badge bg-secondary">متوقف</span>'}</td>
+      <td class="small text-muted">${period}</td>
+      <td><button class="btn btn-sm btn-outline-primary" data-id="${x.id}">تعديل</button></td>
+    </tr>`;
+  }).join('');
+
+  rows.querySelectorAll('button[data-id]').forEach(b=>
+    b.addEventListener('click', ()=> openEdit(items.find(x=> x.id==Number(b.dataset.id))))
+  );
+}
+
+function syncTargetUi(){
+  const t = els.targetType.value;
+  if(t==='2'){
+    els.wrapCategory.style.display='';
+    els.wrapProduct.style.display='none';
+  } else {
+    els.wrapCategory.style.display='none';
+    els.wrapProduct.style.display='';
+  }
+}
+
+function openNew(){
+  currentId = null;
+  document.getElementById('btnDelete').style.display='none';
+  els.targetType.value='2';
+  syncTargetUi();
+  if(els.categoryId.options.length) els.categoryId.value = els.categoryId.options[0].value;
+  if(els.productId.options.length) els.productId.value = els.productId.options[0].value;
+  els.percent.value='10';
+  els.fromUtc.value='';
+  els.toUtc.value='';
+  els.isActive.checked=true;
+  dlg.show();
+}
+
+function openEdit(x){
+  currentId = x.id;
+  document.getElementById('btnDelete').style.display='';
+  els.targetType.value=String(x.targetType);
+  syncTargetUi();
+  if(x.targetType==2) els.categoryId.value=String(x.targetId);
+  else els.productId.value=String(x.targetId);
+  els.percent.value=String(Math.round(x.percent??0));
+  els.fromUtc.value=toLocalInput(x.startsAtUtc);
+  els.toUtc.value=toLocalInput(x.endsAtUtc);
+  els.isActive.checked=!!x.isActive;
+  dlg.show();
+}
+
+async function save(){
+  const percent = Number(els.percent.value||0);
+  const targetType = Number(els.targetType.value);
+  const targetId = targetType===2 ? Number(els.categoryId.value) : Number(els.productId.value);
+  const title = `خصم ${Math.round(percent)}%`;
+  const body = {
+    id: currentId,
+    title,
+    targetType,
+    targetId,
+    valueType: 1,
+    percent,
+    amount: null,
+    minOrderAmount: null,
+    isActive: els.isActive.checked,
+    startsAtUtc: els.fromUtc.value? new Date(els.fromUtc.value).toISOString(): null,
+    endsAtUtc: els.toUtc.value? new Date(els.toUtc.value).toISOString(): null,
+    badgeText: null
+  };
+  const res = await fetch('/api/admin/discounts', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if(!res.ok){
+    const t = await res.text();
+    alert('فشل الحفظ: ' + t);
+    return;
+  }
+  dlg.hide();
+  await load();
+}
+
+async function del(){
+  if(!currentId) return;
+  if(!confirm('حذف الخصم؟')) return;
+  const res = await fetch('/api/admin/discounts/' + currentId, { method:'DELETE' });
+  if(!res.ok){ alert('فشل الحذف'); return; }
+  dlg.hide();
+  await load();
+}
+
+document.getElementById('btnNew').addEventListener('click', openNew);
+document.getElementById('btnRefresh').addEventListener('click', load);
+document.getElementById('btnSave').addEventListener('click', save);
+document.getElementById('btnDelete').addEventListener('click', del);
+els.targetType.addEventListener('change', syncTargetUi);
+
+(async ()=>{
+  try{
+    await loadMenuMaps();
+    await load();
+  } catch(e){
+    rows.innerHTML = '<tr><td colspan="7" class="text-danger">فشل التحميل</td></tr>';
+  }
+})();
+</script>
+}
