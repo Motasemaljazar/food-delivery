@@ -81,7 +81,7 @@
 
 <table>
 <tr>
-<td align="center"><img src="screenshots/1777220978835.png" width="200"/><br/><b>Account Management</b><br/>إدارة حسابك</td>
+<td align="center"><img src="screenshots/1772209788352.png" width="200"/><br/><b>Account Management</b><br/>إدارة حسابك</td>
 <td align="center"><img src="screenshots/1777221031788.png" width="200"/><br/><b>Order Review</b><br/>مراجعة الطلب</td>
 <td align="center"><img src="screenshots/1777221036201.png" width="200"/><br/><b>Product Details</b><br/>تفاصيل المنتج</td>
 </tr>
