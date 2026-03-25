@@ -75,29 +75,18 @@
 
 ---
 
-## 📸 Screenshots / لقطات الشاشة
-
-### 📱 Customer App — تطبيق الزبائن
+## 📸
 
 <table>
 <tr>
 <td align="center"><img src="screenshots/1772209788352.png" width="200"/><br/><b>Account Management</b><br/>إدارة حسابك</td>
 <td align="center"><img src="screenshots/1772210317883.png" width="200"/><br/><b>Order Review</b><br/>مراجعة الطلب</td>
-<td align="center"><img src="screenshots/1777221036201.png" width="200"/><br/><b>Product Details</b><br/>تفاصيل المنتج</td>
+<td align="center"><img src="screenshots/1772214835650.png" width="200"/><br/><b>Product Details</b><br/>تفاصيل المنتج</td>
 </tr>
 <tr>
-<td align="center"><img src="screenshots/1777221451720.png" width="200"/><br/><b>Offers & Deals</b><br/>العروض والخصومات</td>
-<td align="center"><img src="screenshots/1777214835650.png" width="200"/><br/><b>Easy Ordering</b><br/>الطلب السهل</td>
+<td align="center"><img src="screenshots/1772210362016.png" width="200"/><br/><b>Offers & Deals</b><br/>العروض والخصومات</td>
+<td align="center"><img src="screenshots/1772214517204.png" width="200"/><br/><b>Easy Ordering</b><br/>الطلب السهل</td>
 <td></td>
-</tr>
-</table>
-### 🚗 Driver App — تطبيق السائقين
-
-<table>
-<tr>
-          <td align="center"><img src="screenshots/04_chat.jpg" width="200"/><br/><b>Live Order Tracking</b><br/>تتبع الطلب لحظياً</td>
-
-<td align="center"><img src="screenshots/07_driver_reports.jpg" width="200"/><br/><b>Daily Reports</b><br/>إحصائيات اليوم</td>
 </tr>
 </table>
 
