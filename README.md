@@ -81,7 +81,7 @@
 
 <table>
 <tr>
-<td align="center"><img src="/mnt/user-data/uploads/1000076583.png" width="200"/><br/><b>Account Management</b><br/>إدارة حسابك</td>
+<td align="center"><img src="/mnt/user-data/uploads/screenshots/1772209788352.png" width="200"/><br/><b>Account Management</b><br/>إدارة حسابك</td>
 <td align="center"><img src="/mnt/user-data/uploads/1000076585.png" width="200"/><br/><b>Order Review</b><br/>مراجعة الطلب</td>
 <td align="center"><img src="/mnt/user-data/uploads/1000076604.png" width="200"/><br/><b>Product Details</b><br/>تفاصيل المنتج</td>
 </tr>
