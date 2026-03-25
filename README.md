@@ -81,13 +81,13 @@
 
 <table>
 <tr>
-<td align="center"><img src="screenshots/1772214835650.png)" width="200"/><br/><b>Live Chat</b><br/>الدردشة المباشرة</td>
-<td align="center"><img src="screenshots/02_cart.jpg" width="200"/><br/><b>User Profile</b><br/>الملف الشخصي</td>
-<td align="center"><img src="screenshots/03_profile.jpg" width="200"/><br/><b>Shopping Cart</b><br/>سلة الطلبات</td>
+<td align="center"><img src="/mnt/user-data/uploads/1000076583.png" width="200"/><br/><b>Account Management</b><br/>إدارة حسابك</td>
+<td align="center"><img src="/mnt/user-data/uploads/1000076585.png" width="200"/><br/><b>Order Review</b><br/>مراجعة الطلب</td>
+<td align="center"><img src="/mnt/user-data/uploads/1000076604.png" width="200"/><br/><b>Product Details</b><br/>تفاصيل المنتج</td>
 </tr>
 <tr>
-
-<td align="center"><img src="screenshots/05_driver_tracking.jpg" width="200"/><br/><b>Login Screen</b><br/>تسجيل الدخول</td>
+<td align="center"><img src="/mnt/user-data/uploads/1000076606.png" width="200"/><br/><b>Offers & Deals</b><br/>العروض والخصومات</td>
+<td align="center"><img src="/mnt/user-data/uploads/1000076608.png" width="200"/><br/><b>Easy Ordering</b><br/>الطلب السهل</td>
 <td></td>
 </tr>
 </table>
