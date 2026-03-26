@@ -79,13 +79,13 @@
 
 <table>
 <tr>
-<td align="center"><img src="screenshots/1772209788352.png" width="200"/><br/><b>Account Management</b><br/></td>
-<td align="center"><img src="screenshots/1772210317883.png" width="200"/><br/><b>Order Review</b><br/></td>
-<td align="center"><img src="screenshots/1772214835650.png" width="200"/><br/><b>Product Details</b><br/></td>
+<td align="center"><img src="screenshots/1772209788352.png" width="200"/><br/><b></b><br/></td>
+<td align="center"><img src="screenshots/1772210317883.png" width="200"/><br/><b></b><br/></td>
+<td align="center"><img src="screenshots/1772214835650.png" width="200"/><br/><b></b><br/></td>
 </tr>
 <tr>
-<td align="center"><img src="screenshots/1772210362016.png" width="200"/><br/><b>Offers & Deals</b><br/></td>
-<td align="center"><img src="screenshots/1772214517204.png" width="200"/><br/><b>Easy Ordering</b><br/>ا</td>
+<td align="center"><img src="screenshots/1772210362016.png" width="200"/><br/><b></b><br/></td>
+<td align="center"><img src="screenshots/1772214517204.png" width="200"/><br/><b></b><br/></td>
 <td></td>
 </tr>
 </table>
