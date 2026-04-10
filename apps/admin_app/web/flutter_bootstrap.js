@@ -1,1 +1,0 @@
-{{flutter_bootstrap_js}}
